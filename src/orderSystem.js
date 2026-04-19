@@ -210,6 +210,43 @@ export function createOrderSystem(app) {
   markDoneText.y = markDoneBg.y + 10;
   seatModalContainer.addChild(markDoneText);
 
+  function playDismissSound() {
+    if (!sfx.enabled) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(220, now + 0.15);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      osc.start(now); osc.stop(now + 0.18);
+    } catch (_) {}
+  }
+
+  function playNoSound() {
+    if (!sfx.enabled) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+      // Descending two-note drop
+      [[300, 0], [210, 0.1]].forEach(([freq, delay]) => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.18, now + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.16);
+        osc.start(now + delay);
+        osc.stop(now + delay + 0.17);
+      });
+    } catch (_) {}
+  }
+
   function playReceiveSound() {
     if (!sfx.enabled) return;
     try {
@@ -406,6 +443,7 @@ export function createOrderSystem(app) {
     } else {
       noCount++;
       noText.text = `No: ${noCount}`;
+      playNoSound();
     }
     // Stop accepting input immediately; keep dialogFading=true so player stays frozen
     dialogOpen = false;
@@ -424,6 +462,7 @@ export function createOrderSystem(app) {
   // Close dialog without committing to Yes or No — NPC stays in queue
   function dismissDialog() {
     if (!dialogOpen) return;
+    playDismissSound();
     dialogOpen = false;
     dialogFading = true;
     const capturedDismiss = onDismiss;
