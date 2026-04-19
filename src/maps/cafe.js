@@ -2,13 +2,16 @@ import { Assets, Sprite, Texture, Container, Graphics, Rectangle, TilingSprite }
 import { TILE_SIZE, PATH_ROWS } from '../constants.js';
 
 export async function createCafeMap(app) {
-  const floorTexture = await Assets.load('/sprites/Cafe/Floors&Walls/floor48x48.png');
+  const [floorTexture, wall3Tex] = await Promise.all([
+    Assets.load('/sprites/Cafe/Floors&Walls/floor48x48.png'),
+    Assets.load('/sprites/Cafe/Floors&Walls/wall3.png'),
+  ]);
 
   const totalCols = Math.ceil(app.screen.width / TILE_SIZE);
   const totalRows = Math.ceil(app.screen.height / TILE_SIZE);
 
   const cafeFloorTile = new Texture({ source: floorTexture.source, frame: new Rectangle(0, 0, 48, 48) });
-  const pathTile = new Texture({ source: floorTexture.source, frame: new Rectangle(48, 0, 48, 48) });
+  const pathTile = new Texture({ source: wall3Tex.source, frame: new Rectangle(0, 144, 48, 48) });
 
   // Floor container — always rendered behind everything
   const floorContainer = new Container();

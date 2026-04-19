@@ -28,7 +28,7 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
   sprite.anchor.set(0.5, 0.5);
   // Spawn behind the counter area
   sprite.x = 250;
-  sprite.y = 220;
+  sprite.y = 208;
   sprite.scale.set(1.2);
   sprite.animationSpeed = 0.15;
   sprite.play();

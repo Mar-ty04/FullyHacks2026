@@ -51,13 +51,11 @@ export async function createNPC(app, registerBounds, pathStartRow) {
   const stopY = registerBounds.y + registerBounds.height / 2 + FRAME_H * SCALE / 2 + 10;
 
   // NPC waypoints
-  // 1. Walk right along bottom path to the door (1/3 in)
-  // 2. Turn up from the door toward the register
-  // 3. Stop in front of the register (with padding)
+  // 1. Walk right along bottom path directly below the register
+  // 2. Walk straight up to stop in front of the register
   const waypoints = [
-    { x: doorX, y: pathY },      // walk along path to door
-    { x: doorX, y: stopY },      // walk up toward register
-    { x: stopX, y: stopY },      // walk to register
+    { x: stopX, y: pathY },   // walk along path to x below register
+    { x: stopX, y: stopY },   // walk straight up to register
   ];
 
   let waypointIndex = 0;
