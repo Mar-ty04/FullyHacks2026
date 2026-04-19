@@ -3,10 +3,11 @@ import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
 import { RECIPES, PASTRIES } from './data/recipes.js';
 
 export function getRandomOrder() {
-  const drinks  = RECIPES.map(r => r.result.replace('\n', ' '));
-  const pastries = PASTRIES.map(p => p.name);
-  const all = [...drinks, ...pastries];
-  return all[Math.floor(Math.random() * all.length)];
+  if (Math.random() < 0.25) {
+    return PASTRIES[Math.floor(Math.random() * PASTRIES.length)].name;
+  }
+  const recipe = RECIPES[Math.floor(Math.random() * RECIPES.length)];
+  return recipe.result.replace('\n', ' ');
 }
 
 export function createOrderSystem(app) {
