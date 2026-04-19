@@ -28,7 +28,7 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
   sprite.anchor.set(0.5, 0.5);
   // Spawn behind the counter area
   sprite.x = 250;
-  sprite.y = 220;
+  sprite.y = 208;
   sprite.scale.set(1.2);
   sprite.animationSpeed = 0.15;
   sprite.play();
@@ -70,8 +70,8 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
     const clampedY = Math.max(halfH, Math.min(cafeBottom - halfH, newY));
 
     // Player collision box
-    const playerW = 50;
-    const playerH = 40;
+    const playerW = 40;
+    const playerH = 38;
 
     function collidesAt(px, py) {
       const left = px - playerW / 2;

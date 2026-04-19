@@ -2,13 +2,16 @@ import { Assets, Sprite, Texture, Container, Graphics, Rectangle, TilingSprite }
 import { TILE_SIZE, PATH_ROWS } from '../constants.js';
 
 export async function createCafeMap(app) {
-  const floorTexture = await Assets.load('/sprites/Cafe/Floors&Walls/floor48x48.png');
+  const [floorTexture, wall3Tex] = await Promise.all([
+    Assets.load('/sprites/Cafe/Floors&Walls/floor48x48.png'),
+    Assets.load('/sprites/Cafe/Floors&Walls/wall3.png'),
+  ]);
 
   const totalCols = Math.ceil(app.screen.width / TILE_SIZE);
   const totalRows = Math.ceil(app.screen.height / TILE_SIZE);
 
   const cafeFloorTile = new Texture({ source: floorTexture.source, frame: new Rectangle(0, 0, 48, 48) });
-  const pathTile = new Texture({ source: floorTexture.source, frame: new Rectangle(48, 0, 48, 48) });
+  const pathTile = new Texture({ source: wall3Tex.source, frame: new Rectangle(0, 144, 48, 48) });
 
   // Floor container — always rendered behind everything
   const floorContainer = new Container();
@@ -44,6 +47,7 @@ export async function createCafeMap(app) {
   boundary.stroke({ width: 3, color: 0x5c3a21 });
   floorContainer.addChild(boundary);
 
+
   // Whale carpet — flat on the floor, no collision
   const whaleTex = await Assets.load('/sprites/Cafe/Sprite/23.png');
   const whale = new Sprite(whaleTex);
@@ -55,6 +59,8 @@ export async function createCafeMap(app) {
   // --- Furniture (depth-sorted with player) ---
   const furniture = [];
   const colliders = [];
+  // Chair center positions for NPC sit-down targets (4 stools + 6 booth chairs = 10 total)
+  const chairPositions = [];
 
   // Add furniture with full collision (player can't walk through at all)
   function addSolidFurniture(sprite, collisionPadding = 2) {
@@ -95,7 +101,11 @@ export async function createCafeMap(app) {
   topCounter2.x = 91 + Math.round(counter204Tex.width * 0.5);
   topCounter2.y = 98;
   topCounter2.scale.set(0.5);
-  addSolidFurniture(topCounter2);
+  // Shorter collision so player can get close to espresso machine
+  floorContainer.addChild(topCounter2);
+  const tc2W = counter204Tex.width * 0.5;
+  const tc2H = counter204Tex.height * 0.5;
+  colliders.push({ x: topCounter2.x - 2, y: topCounter2.y - 2, w: tc2W + 4, h: tc2H * 0.7 });
 
   // Stove
   const stoveTex = await Assets.load('/sprites/Cafe/Sprite/226.png');
@@ -134,7 +144,7 @@ export async function createCafeMap(app) {
   cafeWindow.x = topCounter3x + Math.round(counter204Tex.width * 0.5) + Math.round(fridgeTex.width * 0.20) + 70;
   cafeWindow.y = 60;
   cafeWindow.scale.set(0.18);
-  furniture.push(cafeWindow);
+  floorContainer.addChild(cafeWindow);
 
   // Banner (wall decoration, no collision)
   const bannerTex = await Assets.load('/sprites/Cafe/Sprite/38.png');
@@ -142,7 +152,7 @@ export async function createCafeMap(app) {
   banner.x = topCounter3x + Math.round(counter204Tex.width * 0.5);
   banner.y = 185;
   banner.scale.set(0.35);
-  furniture.push(banner);
+  floorContainer.addChild(banner);
 
   // Round tables
   const roundTableTex = await Assets.load('/sprites/Cafe/Sprite/326.png');
@@ -175,12 +185,14 @@ export async function createCafeMap(app) {
     leftStool.y = stoolCenterY;
     leftStool.scale.set(stoolScale);
     addFurniture(leftStool);
+    chairPositions.push({ x: leftStool.x + Math.round(stoolW / 2), y: stoolCenterY + Math.round(stoolH / 2) });
 
     const rightStool = new Sprite(stoolTex);
     rightStool.x = rtX + rtW + gap;
     rightStool.y = stoolCenterY;
     rightStool.scale.set(stoolScale);
     addFurniture(rightStool);
+    chairPositions.push({ x: rightStool.x + Math.round(stoolW / 2), y: stoolCenterY + Math.round(stoolH / 2) });
   }
 
   // Couch
@@ -191,22 +203,32 @@ export async function createCafeMap(app) {
   couch.x = firstRtRightEdge + 110;
   couch.y = 370;
   couch.scale.set(0.35);
-  addFurniture(couch);
+  floorContainer.addChild(couch);
+  // Small collider — just the seat area (bottom 30%)
+  const couchW = couchTex.width * 0.35;
+  const couchH = couchTex.height * 0.35;
+  colliders.push({ x: couch.x, y: couch.y + couchH * 0.35, w: couchW, h: couchH * 0.3 });
 
-  // Coffee table
+  // Coffee table (flat on floor — player walks over it, but has collision)
   const coffeeTable = new Sprite(coffeeTableTex);
   coffeeTable.x = couch.x - 24;
   coffeeTable.y = couch.y + Math.round(couchTex.height * 0.35) - 10;
   coffeeTable.scale.set(0.35);
-  addFurniture(coffeeTable);
+  floorContainer.addChild(coffeeTable);
+  const ctW = coffeeTableTex.width * 0.35;
+  const ctH = coffeeTableTex.height * 0.35;
+  colliders.push({ x: coffeeTable.x, y: coffeeTable.y + ctH * 0.5, w: ctW, h: ctH * 0.5 });
 
-  // Display
+  // Display (flat on floor — player walks over it, but has collision)
   const displayTex = await Assets.load('/sprites/Cafe/Sprite/14.png');
   const display = new Sprite(displayTex);
   display.x = couch.x + 8;
   display.y = couch.y + Math.round(couchTex.height * 0.35) + 30;
   display.scale.set(0.35);
-  addFurniture(display);
+  floorContainer.addChild(display);
+  const dispW = displayTex.width * 0.35;
+  const dispH = displayTex.height * 0.35;
+  colliders.push({ x: display.x, y: display.y + dispH * 0.5, w: dispW, h: dispH * 0.5 });
 
   // Espresso machine (sits on counter — added to overlay, no depth sort)
   const espressoTex = await Assets.load('/sprites/Cafe/Sprite/233.png');
@@ -240,6 +262,7 @@ export async function createCafeMap(app) {
   const tableScreenW = tableTex.width * tableScale;
   const chairScreenW = chairTex.width * chairScale;
   const chairY = 235 + Math.round(tableTex.height * tableScale) - 22;
+  const chairH = Math.round(chairTex.height * chairScale);
   for (let i = 0; i < 3; i++) {
     const tableX = 380 + i * tableSpacing;
 
@@ -254,12 +277,14 @@ export async function createCafeMap(app) {
     chair1.y = chairY;
     chair1.scale.set(chairScale);
     addFurniture(chair1);
+    chairPositions.push({ x: chair1.x + Math.round(chairScreenW / 2), y: chairY + Math.round(chairH / 2) });
 
     const chair2 = new Sprite(chairTex);
     chair2.x = tableX + Math.round(tableScreenW * 0.7 - chairScreenW / 2) + 8;
     chair2.y = chairY;
     chair2.scale.set(chairScale);
     addFurniture(chair2);
+    chairPositions.push({ x: chair2.x + Math.round(chairScreenW / 2), y: chairY + Math.round(chairH / 2) });
   }
 
   // Cash register (sits on counter — added to overlay, no depth sort)
@@ -291,5 +316,10 @@ export async function createCafeMap(app) {
   overlayContainer.addChild(espresso);
   overlayContainer.addChild(register);
 
-  return { floorContainer, furniture, colliders, registerBounds, pathStartRow, overlayContainer };
+  // Interaction zone: rectangular area on the staff side of the counter/register.
+  // The dialog triggers when the player's center is inside this rect AND the NPC has arrived.
+  // Covers x=130..320, y=180..270 — where the barista naturally stands near the register.
+  const counterInteractZone = { x: 130, y: 180, w: 190, h: 90 };
+
+  return { floorContainer, furniture, colliders, registerBounds, pathStartRow, overlayContainer, counterInteractZone, chairPositions };
 }

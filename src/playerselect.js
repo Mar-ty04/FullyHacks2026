@@ -4,11 +4,11 @@ const FRAME_W = 96;
 const FRAME_H = 80;
 
 const PLAYERS = [
-  { name: 'Fishy',     path: '/sprites/FishFight/player/PlayerFishy(96x80).png' },
-  { name: 'Catty',     path: '/sprites/FishFight/player/PlayerCatty(96x80).png' },
-  { name: 'Sharky',    path: '/sprites/FishFight/player/PlayerSharky(96x80).png' },
-  { name: 'Orcy',      path: '/sprites/FishFight/player/PlayerOrcy(96x80).png' },
-  { name: 'Pescy',     path: '/sprites/FishFight/player/PlayerPescy(96x80).png' },
+  { name: 'Fishy',    path: '/sprites/FishFight/player/PlayerFishy(96x80).png' },
+  { name: 'Catty',    path: '/sprites/FishFight/player/PlayerCatty(96x80).png' },
+  { name: 'Sharky',   path: '/sprites/FishFight/player/PlayerSharky(96x80).png' },
+  { name: 'Orcy',     path: '/sprites/FishFight/player/PlayerOrcy(96x80).png' },
+  { name: 'Pescy',    path: '/sprites/FishFight/player/PlayerPescy(96x80).png' },
   { name: 'Lionfishy', path: '/sprites/FishFight/player/PlayerLionfishy(96x80).png' },
 ];
 
@@ -41,6 +41,9 @@ export async function createPlayerSelect(app) {
   const container = new Container();
   const w = app.screen.width;
   const h = app.screen.height;
+
+  // Wait for pixel font to load before rendering text
+  await document.fonts.load('16px "Press Start 2P"');
 
   const [bgTexture, btnTexture, ...playerTextures] = await Promise.all([
     Assets.load('/sprites/start-sprites/player-select background.jpg'),
