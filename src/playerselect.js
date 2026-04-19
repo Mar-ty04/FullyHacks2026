@@ -72,7 +72,7 @@ export async function createPlayerSelect(app) {
 
     const label = new Text({
       text: player.name,
-      style: { fontFamily: 'Arial', fontSize: 22, fontWeight: 'bold', fill: 0xffffff, dropShadow: { color: 0x000000, blur: 4, distance: 2 } },
+      style: { fontFamily: '"Press Start 2P"', fontSize: 14, fill: 0xffffff, dropShadow: { color: 0x000000, blur: 0, distance: 2 } },
     });
     label.anchor.set(0.5);
     label.x = x;
