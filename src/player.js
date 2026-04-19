@@ -1,5 +1,5 @@
 import { Assets, AnimatedSprite, Texture, Rectangle } from 'pixi.js';
-import { FRAME_W, FRAME_H, PLAYER_SPEED, TILE_SIZE, PATH_COLS } from './constants.js';
+import { FRAME_W, FRAME_H, PLAYER_SPEED, TILE_SIZE, PATH_ROWS } from './constants.js';
 
 function getFrames(source, row, startCol, count) {
   const frames = [];
@@ -18,15 +18,16 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
 
   // Row 1 is the walk cycle (6 frames) — use for both directions, flip for right
   const walkFrames = getFrames(source, 1, 0, 6);
-  const idleFrames = getFrames(source, 1, 0, 1);
+  // Row 0 is the idle animation (frames 0-6)
+  const idleFrames = getFrames(source, 0, 0, 7);
 
   const totalCols = Math.ceil(app.screen.width / TILE_SIZE);
   const totalRows = Math.ceil(app.screen.height / TILE_SIZE);
 
   const sprite = new AnimatedSprite(idleFrames);
   sprite.anchor.set(0.5, 0.5);
-  sprite.x = PATH_COLS * TILE_SIZE + (totalCols - PATH_COLS) * TILE_SIZE / 2;
-  sprite.y = totalRows * TILE_SIZE / 2;
+  sprite.x = totalCols * TILE_SIZE / 2;
+  sprite.y = (totalRows - PATH_ROWS) * TILE_SIZE / 2;
   sprite.scale.set(1.2);
   sprite.animationSpeed = 0.15;
   sprite.play();
@@ -56,12 +57,12 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
     sprite.x += dx * PLAYER_SPEED;
     sprite.y += dy * PLAYER_SPEED;
 
-    // Clamp player to cafe area (right of NPC path)
+    // Clamp player to cafe area (above NPC path)
     const halfW = (FRAME_W * SCALE) / 2;
     const halfH = (FRAME_H * SCALE) / 2;
-    const cafeLeft = PATH_COLS * TILE_SIZE;
-    sprite.x = Math.max(cafeLeft + halfW, Math.min(totalCols * TILE_SIZE - halfW, sprite.x));
-    sprite.y = Math.max(halfH, Math.min(totalRows * TILE_SIZE - halfH, sprite.y));
+    const cafeBottom = (totalRows - PATH_ROWS) * TILE_SIZE;
+    sprite.x = Math.max(halfW, Math.min(totalCols * TILE_SIZE - halfW, sprite.x));
+    sprite.y = Math.max(halfH, Math.min(cafeBottom - halfH, sprite.y));
 
     // Flip direction
     if (dx > 0) sprite.scale.x = SCALE;
