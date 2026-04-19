@@ -47,6 +47,7 @@ export async function createCafeMap(app) {
   boundary.stroke({ width: 3, color: 0x5c3a21 });
   floorContainer.addChild(boundary);
 
+
   // Whale carpet — flat on the floor, no collision
   const whaleTex = await Assets.load('/sprites/Cafe/Sprite/23.png');
   const whale = new Sprite(whaleTex);

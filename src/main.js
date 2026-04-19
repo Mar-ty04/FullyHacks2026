@@ -304,37 +304,37 @@ async function init() {
         // Capture frontEntry in closure so it stays valid after queue shifts
         const capturedEntry = frontEntry;
         orderSystem.show(order, (decision) => {
-          // Add money when order is accepted
           if (decision === 'yes') {
             orderSystem.addMoney(20);
-          }
 
-          const chairIndex = getRandomFreeChair();
-          if (chairIndex !== -1) {
-            // Send NPC to sit at the chosen chair
-            occupiedChairs.add(chairIndex);
-            const chairPos = map.chairPositions[chairIndex];
-            capturedEntry.npc.startSitting(chairPos);
-            seatedCustomers.push({ npc: capturedEntry.npc, name: capturedEntry.name, order, chairIndex });
-            orderSystem.addSeatedCustomer(capturedEntry.npc, capturedEntry.name, order);
+            const chairIndex = getRandomFreeChair();
+            if (chairIndex !== -1) {
+              occupiedChairs.add(chairIndex);
+              const chairPos = map.chairPositions[chairIndex];
+              capturedEntry.npc.startSitting(chairPos);
+              seatedCustomers.push({ npc: capturedEntry.npc, name: capturedEntry.name, order, chairIndex });
+              orderSystem.addSeatedCustomer(capturedEntry.npc, capturedEntry.name, order);
 
-            // Clicking the seated NPC opens the order modal
-            capturedEntry.npc.setOnClick(() => {
-              orderSystem.showSeatModal({ name: capturedEntry.name, order }, () => {
-                // Mark as Done: free chair and walk NPC off-screen
-                const scIdx = seatedCustomers.findIndex(sc => sc.npc === capturedEntry.npc);
-                if (scIdx !== -1) {
-                  occupiedChairs.delete(seatedCustomers[scIdx].chairIndex);
-                  seatedCustomers.splice(scIdx, 1);
-                }
-                orderSystem.removeSeatedCustomer(capturedEntry.npc);
-                capturedEntry.npc.startExit();
-                exitingNPCs.push(capturedEntry.npc);
+              capturedEntry.npc.setOnClick(() => {
+                orderSystem.showSeatModal({ name: capturedEntry.name, order }, () => {
+                  const scIdx = seatedCustomers.findIndex(sc => sc.npc === capturedEntry.npc);
+                  if (scIdx !== -1) {
+                    occupiedChairs.delete(seatedCustomers[scIdx].chairIndex);
+                    seatedCustomers.splice(scIdx, 1);
+                  }
+                  orderSystem.removeSeatedCustomer(capturedEntry.npc);
+                  capturedEntry.npc.startExit();
+                  exitingNPCs.push(capturedEntry.npc);
+                });
               });
-            });
+            } else {
+              // Cafe full — exit left
+              capturedEntry.npc.startExit('left');
+              exitingNPCs.push(capturedEntry.npc);
+            }
           } else {
-            // Cafe full — NPC exits immediately
-            capturedEntry.npc.startExit();
+            // Order declined — exit right
+            capturedEntry.npc.startExit('right');
             exitingNPCs.push(capturedEntry.npc);
           }
 
@@ -360,6 +360,14 @@ async function init() {
         child.zIndex = child.y + child.height;
       }
     }
+
+    // Seated NPCs must render above their stool
+    for (const sc of seatedCustomers) {
+      if (sc.npc.isSittingIdle()) {
+        sc.npc.sprite.zIndex = sc.npc.sprite.y + 100;
+      }
+    }
+
     gameContainer.sortChildren();
   });
 }
