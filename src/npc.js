@@ -46,8 +46,8 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
   sprite.play();
 
   // Debug: green bounding box for interaction range (visible when seated)
-  let INTERACT_W = 60;
-  let INTERACT_H = 50;
+  let INTERACT_W = 70;
+  let INTERACT_H = 80;
   let INTERACT_Y_OFFSET = 0.5; // 0.5 = centered, 0.8 = extends upward
   const debugBox = new Graphics();
   debugBox.visible = false;
@@ -75,6 +75,9 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
   let sittingIdle = false;
   let activeWaypoints = entryWaypoints;
   let clickCallback = null;
+  let enjoying = false;
+  let enjoyTimer = 0;
+  const ENJOY_DURATION = 5 * 60; // 5 seconds at ~60fps
 
   // Walks NPC from its current position down to the path, then off-screen left
   function startExit(direction = 'right') {
@@ -112,9 +115,19 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
       INTERACT_H = 120;
       INTERACT_Y_OFFSET = 0.8; // extends upward toward counter
     } else {
-      INTERACT_H = 50;
+      INTERACT_H = 80;
       INTERACT_Y_OFFSET = 0.5; // centered
     }
+  }
+
+  // NPC enjoys drink for 5 seconds then exits
+  function startEnjoying() {
+    enjoying = true;
+    sittingIdle = false;
+    enjoyTimer = 0;
+    debugBox.visible = false;
+    sprite.eventMode = 'none';
+    sprite.cursor = 'default';
   }
 
   // Registers a callback fired when the NPC sprite is clicked while sitting idle
@@ -142,6 +155,16 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
     if (exited) return;
     if (arrived) return;
     if (sittingIdle) return;
+
+    // Enjoying drink — count down then exit
+    if (enjoying) {
+      enjoyTimer++;
+      if (enjoyTimer >= ENJOY_DURATION) {
+        enjoying = false;
+        startExit('right');
+      }
+      return;
+    }
 
     const target = activeWaypoints[waypointIndex];
     const dx = target.x - sprite.x;
@@ -211,5 +234,7 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
     getThumbnailTexture,
     isPlayerInRange,
     cleanup,
+    startEnjoying,
+    isEnjoying: () => enjoying,
   };
 }

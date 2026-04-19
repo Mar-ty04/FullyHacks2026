@@ -306,17 +306,66 @@ async function init() {
   sinkHint.visible = false;
   app.stage.addChild(sinkHint);
 
+  // Track which seated NPC the player is near
+  let nearNPC = null;
+
+  // "Press E to serve" hint
+  const serveHint = new Text({
+    text: '[ E ] Serve',
+    style: { fontFamily: '"Press Start 2P"', fontSize: 8, fill: 0xffffff,
+             dropShadow: { color: 0x000000, blur: 0, distance: 1 } },
+  });
+  serveHint.anchor.set(0.5, 1);
+  serveHint.visible = false;
+  app.stage.addChild(serveHint);
+
   window.addEventListener('keydown', (e) => {
     if (e.key === 'e' || e.key === 'E') {
-      if (nearEspresso && !gamePaused) {
+      if (toolbar.isSelecting()) return; // already selecting
+      if (nearNPC && !gamePaused && toolbar.hasDrinks()) {
+        // Serve a seated NPC — open toolbar selection
+        const servingEntry = nearNPC;
+        toolbar.enterSelectMode((selected) => {
+          // Compare drink name to NPC's order
+          if (selected.name === servingEntry.order) {
+            // Correct drink — NPC enjoys for 5 sec then leaves
+            servingEntry.npc.startEnjoying();
+            orderSystem.removeSeatedCustomer(servingEntry.npc);
+            // After enjoying, NPC exits (handled in npc.js update)
+            setTimeout(() => {
+              const scIdx = seatedCustomers.findIndex(sc => sc.npc === servingEntry.npc);
+              if (scIdx !== -1) {
+                occupiedChairs.delete(seatedCustomers[scIdx].chairIndex);
+                seatedCustomers.splice(scIdx, 1);
+              }
+              exitingNPCs.push(servingEntry.npc);
+            }, 5200);
+          } else {
+            // Wrong drink — refund drink, NPC leaves immediately
+            toolbar.refundDrink(selected.name, selected.texture);
+            const scIdx = seatedCustomers.findIndex(sc => sc.npc === servingEntry.npc);
+            if (scIdx !== -1) {
+              occupiedChairs.delete(seatedCustomers[scIdx].chairIndex);
+              seatedCustomers.splice(scIdx, 1);
+            }
+            orderSystem.removeSeatedCustomer(servingEntry.npc);
+            servingEntry.npc.startExit('right');
+            exitingNPCs.push(servingEntry.npc);
+          }
+        });
+      } else if (nearEspresso && !gamePaused) {
         gamePaused = true;
         craftingUI.open();
       } else if (nearSink && !gamePaused) {
         toolbar.clearAll();
       }
-    } else if (e.key === 'Escape' && gamePaused) {
-      gamePaused = false;
-      craftingUI.close();
+    } else if (e.key === 'Escape') {
+      if (toolbar.isSelecting()) {
+        toolbar.exitSelectMode();
+      } else if (gamePaused) {
+        gamePaused = false;
+        craftingUI.close();
+      }
     }
   });
 
@@ -324,8 +373,8 @@ async function init() {
   app.ticker.add((ticker) => {
     const dt = ticker.deltaTime;
 
-    // Freeze player while any dialog or crafting is open
-    if (!orderSystem.isOpen() && !orderSystem.isSeatModalOpen() && !gamePaused) {
+    // Freeze player while any dialog, crafting, or serving is open
+    if (!orderSystem.isOpen() && !orderSystem.isSeatModalOpen() && !gamePaused && !toolbar.isSelecting()) {
       player.update();
     }
 
@@ -339,6 +388,22 @@ async function init() {
     const dsx = px - SINK_CX, dsy = py - SINK_CY;
     nearSink = Math.sqrt(dsx * dsx + dsy * dsy) < SINK_R;
     sinkHint.visible = nearSink && !gamePaused;
+
+    // Check if player is near any seated NPC
+    nearNPC = null;
+    if (!gamePaused && !toolbar.isSelecting()) {
+      for (const sc of seatedCustomers) {
+        if (sc.npc.isSittingIdle() && sc.npc.isPlayerInRange(px, py)) {
+          nearNPC = sc;
+          break;
+        }
+      }
+    }
+    serveHint.visible = nearNPC !== null && !gamePaused;
+    if (nearNPC) {
+      serveHint.x = nearNPC.npc.sprite.x;
+      serveHint.y = nearNPC.npc.sprite.y - 50;
+    }
 
     // Spawn timer: add new queue NPC every 8-20 seconds while space available
     spawnTimer += dt;

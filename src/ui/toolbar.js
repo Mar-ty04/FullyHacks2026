@@ -71,6 +71,7 @@ export function createToolbar(app) {
   // Reveal when the mouse is within TRIGGER px of the canvas bottom edge
   const TRIGGER = 48;
   window.addEventListener('mousemove', (e) => {
+    if (selecting) { targetY = VISIBLE_Y; return; }
     const rect = app.canvas.getBoundingClientRect();
     const canvasY = (e.clientY - rect.top) * (app.screen.height / rect.height);
     targetY = canvasY >= app.screen.height - TRIGGER ? VISIBLE_Y : HIDDEN_Y;
@@ -166,5 +167,113 @@ export function createToolbar(app) {
     playEmptySound();
   }
 
-  return { container, addDrink, clearAll };
+  // ── Selection mode — arrow keys to navigate, Enter to confirm ─────────
+  let selectCallback = null;
+  let selecting = false;
+  let selectIndex = -1;
+  let filledSlots = []; // indices of slots that have drinks
+
+  // Selection highlight overlay — drawn on top of slot backgrounds
+  const highlightGfx = new Graphics();
+  container.addChild(highlightGfx);
+
+  function highlightSlot(idx) {
+    highlightGfx.clear();
+    if (idx < 0 || idx >= filledSlots.length) return;
+    const slotIdx = filledSlots[idx];
+    const sx = PAD + slotIdx * (SLOT_SIZE + SLOT_GAP);
+    const sy = PAD;
+    // Bright green border around selected slot
+    highlightGfx.roundRect(sx - 2, sy - 2, SLOT_SIZE + 4, SLOT_SIZE + 4, 6);
+    highlightGfx.stroke({ width: 3, color: 0x44ff88 });
+    highlightGfx.fill({ color: 0x44ff88, alpha: 0.15 });
+  }
+
+  function enterSelectMode(onSelect) {
+    selecting = true;
+    selectCallback = onSelect;
+    targetY = VISIBLE_Y;
+
+    // Find which slots have drinks
+    filledSlots = [];
+    for (let i = 0; i < NUM_SLOTS; i++) {
+      if (slots[i]) filledSlots.push(i);
+    }
+    selectIndex = 0;
+    highlightSlot(selectIndex);
+  }
+
+  function playServeSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const master = ctx.createGain();
+      master.gain.value = 0.3;
+      master.connect(ctx.destination);
+      // Quick rising chime
+      [440, 554, 659].forEach((freq, i) => {
+        const t = ctx.currentTime + i * 0.06;
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.6, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+        osc.connect(g); g.connect(master);
+        osc.start(t); osc.stop(t + 0.25);
+      });
+    } catch (_) {}
+  }
+
+  function confirmSelection() {
+    if (!selecting || filledSlots.length === 0) return;
+    const slotIdx = filledSlots[selectIndex];
+    if (!slots[slotIdx]) return;
+
+    const selected = { name: slots[slotIdx].name, texture: slots[slotIdx].texture };
+
+    // Remove one from the slot
+    slots[slotIdx].count--;
+    if (slots[slotIdx].count <= 0) slots[slotIdx] = null;
+
+    playServeSound();
+    exitSelectMode();
+    if (selectCallback) selectCallback(selected);
+  }
+
+  function handleSelectKey(e) {
+    if (!selecting) return;
+    if (e.key === 'ArrowLeft' || e.key === 'a') {
+      selectIndex = (selectIndex - 1 + filledSlots.length) % filledSlots.length;
+      highlightSlot(selectIndex);
+    } else if (e.key === 'ArrowRight' || e.key === 'd') {
+      selectIndex = (selectIndex + 1) % filledSlots.length;
+      highlightSlot(selectIndex);
+    } else if (e.key === 'Enter') {
+      confirmSelection();
+    }
+  }
+
+  window.addEventListener('keydown', handleSelectKey);
+
+  function exitSelectMode() {
+    selecting = false;
+    selectCallback = null;
+    selectIndex = -1;
+    filledSlots = [];
+    highlightGfx.clear();
+    for (let i = 0; i < NUM_SLOTS; i++) renderSlot(i);
+  }
+
+  function refundDrink(name, texture) {
+    addDrink(name, texture);
+  }
+
+  function isSelecting() { return selecting; }
+
+  function hasDrinks() {
+    return slots.some(s => s !== null);
+  }
+
+  return { container, addDrink, clearAll, enterSelectMode, exitSelectMode, refundDrink, isSelecting, hasDrinks };
 }
