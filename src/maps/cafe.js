@@ -325,5 +325,10 @@ export async function createCafeMap(app) {
     h: registerBounds.height + 30, // extra downward room so player can stand just in front
   };
 
-  return { floorContainer, furniture, colliders, registerBounds, pathStartRow, overlayContainer, counterInteractZone, chairPositions };
+  const stoveBounds = {
+    cx: stove.x + Math.round(stoveTex.width * 0.5 / 2),
+    cy: 195, // player-reachable Y in front of the counter row
+  };
+
+  return { floorContainer, furniture, colliders, registerBounds, pathStartRow, overlayContainer, counterInteractZone, chairPositions, stoveBounds };
 }
