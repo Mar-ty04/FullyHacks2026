@@ -237,8 +237,9 @@ export function createToolbar(app) {
     if (slots[slotIdx].count <= 0) slots[slotIdx] = null;
 
     playServeSound();
+    const cb = selectCallback;
     exitSelectMode();
-    if (selectCallback) selectCallback(selected);
+    if (cb) cb(selected);
   }
 
   function handleSelectKey(e) {
