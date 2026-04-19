@@ -24,7 +24,6 @@ function getFrames(source, row, startCol, count) {
 }
 
 export async function createNPC(app, registerBounds, pathStartRow) {
-  // Pick a random fish
   const spritePath = FISH_SPRITES[Math.floor(Math.random() * FISH_SPRITES.length)];
   const texture = await Assets.load(spritePath);
   const source = texture.source;
@@ -50,52 +49,72 @@ export async function createNPC(app, registerBounds, pathStartRow) {
   const stopX = registerBounds.x;
   const stopY = registerBounds.y + registerBounds.height / 2 + FRAME_H * SCALE / 2 + 10;
 
-  // NPC waypoints
-  // 1. Walk right along bottom path to the door (1/3 in)
-  // 2. Turn up from the door toward the register
-  // 3. Stop in front of the register (with padding)
-  const waypoints = [
-    { x: doorX, y: pathY },      // walk along path to door
-    { x: doorX, y: stopY },      // walk up toward register
-    { x: stopX, y: stopY },      // walk to register
+  // Entry waypoints: enter from left, walk up to door column, then to register
+  const entryWaypoints = [
+    { x: doorX, y: pathY },
+    { x: doorX, y: stopY },
+    { x: stopX, y: stopY },
+  ];
+
+  // Exit waypoints: walk straight down to the path, then exit off-screen to the left
+  const exitWaypoints = [
+    { x: stopX, y: pathY },
+    { x: -FRAME_W * SCALE, y: pathY },
   ];
 
   let waypointIndex = 0;
   let arrived = false;
+  let exiting = false;
+  let exited = false;
+  let activeWaypoints = entryWaypoints;
+
+  // Triggers the exit walk sequence — NPC walks down to path then off-screen left
+  function startExit() {
+    if (exiting || exited) return;
+    exiting = true;
+    arrived = false;
+    waypointIndex = 0;
+    activeWaypoints = exitWaypoints;
+    sprite.textures = walkFrames;
+    sprite.play();
+  }
 
   function update() {
-    if (arrived) return;
+    if (exited) return;
+    if (arrived) return; // idling at register, waiting for startExit()
 
-    const target = waypoints[waypointIndex];
+    const target = activeWaypoints[waypointIndex];
     const dx = target.x - sprite.x;
     const dy = target.y - sprite.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
     if (dist < 3) {
-      // Reached waypoint
       sprite.x = target.x;
       sprite.y = target.y;
       waypointIndex++;
 
-      if (waypointIndex >= waypoints.length) {
-        // Arrived at register
-        arrived = true;
-        sprite.textures = idleFrames;
-        sprite.play();
+      if (waypointIndex >= activeWaypoints.length) {
+        if (exiting) {
+          exited = true;
+          sprite.stop();
+          sprite.visible = false;
+        } else {
+          arrived = true;
+          sprite.textures = idleFrames;
+          sprite.play();
+        }
         return;
       }
     } else {
-      // Move toward waypoint
       const moveX = (dx / dist) * NPC_SPEED;
       const moveY = (dy / dist) * NPC_SPEED;
       sprite.x += moveX;
       sprite.y += moveY;
 
-      // Flip sprite based on horizontal movement
       if (moveX > 0.1) sprite.scale.x = SCALE;
       if (moveX < -0.1) sprite.scale.x = -SCALE;
     }
   }
 
-  return { sprite, update, arrived: () => arrived };
+  return { sprite, update, arrived: () => arrived, startExit, hasExited: () => exited };
 }

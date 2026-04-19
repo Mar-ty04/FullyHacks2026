@@ -6,6 +6,7 @@ import { createTransition } from './transition.js';
 import { createCafeMap } from './maps/cafe.js';
 import { createPlayer } from './player.js';
 import { createNPC } from './npc.js';
+import { createOrderSystem, getRandomOrder } from './orderSystem.js';
 
 const app = new Application();
 
@@ -110,16 +111,59 @@ async function init() {
   const player = await createPlayer(app, selectedPath, map.colliders);
   gameContainer.addChild(player.sprite);
 
-  // Spawn an NPC
-  const npc = await createNPC(app, map.registerBounds, map.pathStartRow);
+  // Spawn the first NPC
+  let npc = await createNPC(app, map.registerBounds, map.pathStartRow);
   gameContainer.addChild(npc.sprite);
+
+  // Order system — HUD and dialog sit above all game content
+  const orderSystem = createOrderSystem(app);
+  app.stage.addChild(orderSystem.hudContainer);
+  app.stage.addChild(orderSystem.dialogContainer);
+
+  let dialogTriggered = false;
+  // Guards against spawning multiple NPCs concurrently while assets load
+  let spawnInProgress = false;
+
+  // Removes the current NPC and asynchronously loads a fresh one
+  async function spawnNewNPC() {
+    if (spawnInProgress) return;
+    spawnInProgress = true;
+    gameContainer.removeChild(npc.sprite);
+    npc = await createNPC(app, map.registerBounds, map.pathStartRow);
+    gameContainer.addChild(npc.sprite);
+    dialogTriggered = false;
+    spawnInProgress = false;
+  }
+
+  // Returns true when the player's sprite center is inside the counter interaction zone
+  function playerNearCounter() {
+    const { x, y, w, h } = map.counterInteractZone;
+    return player.sprite.x >= x && player.sprite.x <= x + w &&
+           player.sprite.y >= y && player.sprite.y <= y + h;
+  }
 
   await transition.fadeOut();
 
   // Game loop
   app.ticker.add(() => {
-    player.update();
+    // Freeze player input while the order dialog is open
+    if (!orderSystem.isOpen()) {
+      player.update();
+    }
     npc.update();
+
+    // When the current NPC has fully exited, spawn the next customer
+    if (npc.hasExited() && !spawnInProgress) {
+      spawnNewNPC().catch(console.error);
+    }
+
+    // Trigger dialog once when NPC has arrived AND player is near the counter
+    if (!dialogTriggered && npc.arrived() && playerNearCounter()) {
+      dialogTriggered = true;
+      orderSystem.show(getRandomOrder(), () => {
+        npc.startExit();
+      });
+    }
 
     // Depth sort using zIndex
     for (const child of gameContainer.children) {

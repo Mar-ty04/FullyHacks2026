@@ -305,5 +305,10 @@ export async function createCafeMap(app) {
   overlayContainer.addChild(espresso);
   overlayContainer.addChild(register);
 
-  return { floorContainer, furniture, colliders, registerBounds, pathStartRow, overlayContainer };
+  // Interaction zone: rectangular area on the staff side of the counter/register.
+  // The dialog triggers when the player's center is inside this rect AND the NPC has arrived.
+  // Covers x=130..320, y=180..270 — where the barista naturally stands near the register.
+  const counterInteractZone = { x: 130, y: 180, w: 190, h: 90 };
+
+  return { floorContainer, furniture, colliders, registerBounds, pathStartRow, overlayContainer, counterInteractZone };
 }
