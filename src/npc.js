@@ -2,6 +2,8 @@ import { Assets, AnimatedSprite, Texture, Rectangle } from 'pixi.js';
 import { FRAME_W, FRAME_H, TILE_SIZE, PATH_ROWS } from './constants.js';
 
 const NPC_SPEED = 1.5;
+// Pixels between each queued customer's stop position (stacked below the register)
+const QUEUE_OFFSET = 65;
 
 const FISH_SPRITES = [
   '/sprites/FishFight/player/PlayerCatty(96x80).png',
@@ -23,8 +25,11 @@ function getFrames(source, row, startCol, count) {
   return frames;
 }
 
-export async function createNPC(app, registerBounds, pathStartRow) {
-  // Pick a random fish
+// options.queueIndex (0-2): offsets the queue stop point below the register.
+// options: { queueIndex?: number }
+export async function createNPC(app, registerBounds, pathStartRow, options = {}) {
+  const { queueIndex = 0 } = options;
+
   const spritePath = FISH_SPRITES[Math.floor(Math.random() * FISH_SPRITES.length)];
   const texture = await Assets.load(spritePath);
   const source = texture.source;
@@ -40,60 +45,126 @@ export async function createNPC(app, registerBounds, pathStartRow) {
   sprite.loop = true;
   sprite.play();
 
-  // Start off-screen left, on the bottom path
   const pathY = (pathStartRow * TILE_SIZE) + (PATH_ROWS * TILE_SIZE / 2);
   const doorX = Math.floor(app.screen.width / 3);
   sprite.x = -FRAME_W;
   sprite.y = pathY;
 
-  // Stop point: in front of the register (below it, with padding)
   const stopX = registerBounds.x;
-  const stopY = registerBounds.y + registerBounds.height / 2 + FRAME_H * SCALE / 2 + 10;
+  // Each queue member stops further below the register by QUEUE_OFFSET
+  const stopY = registerBounds.y + registerBounds.height / 2 + FRAME_H * SCALE / 2 + 10 + queueIndex * QUEUE_OFFSET;
 
-  // NPC waypoints
-  // 1. Walk right along bottom path directly below the register
-  // 2. Walk straight up to stop in front of the register
-  const waypoints = [
+  const entryWaypoints = [
     { x: stopX, y: pathY },   // walk along path to x below register
     { x: stopX, y: stopY },   // walk straight up to register
   ];
 
   let waypointIndex = 0;
   let arrived = false;
+  let exiting = false;
+  let exited = false;
+  let sitting = false;
+  let sittingIdle = false;
+  let activeWaypoints = entryWaypoints;
+  let clickCallback = null;
+
+  // Walks NPC from its current position down to the path, then off-screen left
+  function startExit() {
+    if (exiting || exited) return;
+    exiting = true;
+    arrived = false;
+    sitting = false;
+    sittingIdle = false;
+    waypointIndex = 0;
+    sprite.eventMode = 'none';
+    sprite.cursor = 'default';
+    activeWaypoints = [
+      { x: sprite.x, y: pathY },
+      { x: -FRAME_W * SCALE, y: pathY },
+    ];
+    sprite.textures = walkFrames;
+    sprite.play();
+  }
+
+  // Directs NPC to walk to a chair center after their order is taken
+  function startSitting(chairPos) {
+    if (sitting || exiting || exited) return;
+    sitting = true;
+    arrived = false;
+    waypointIndex = 0;
+    activeWaypoints = [{ x: chairPos.x, y: chairPos.y }];
+    sprite.textures = walkFrames;
+    sprite.play();
+  }
+
+  // Registers a callback fired when the NPC sprite is clicked while sitting idle
+  function setOnClick(cb) {
+    clickCallback = cb;
+  }
+
+  // Returns the first idle frame — used as a thumbnail in the orders pane
+  function getThumbnailTexture() {
+    return idleFrames[0];
+  }
 
   function update() {
+    if (exited) return;
     if (arrived) return;
+    if (sittingIdle) return;
 
-    const target = waypoints[waypointIndex];
+    const target = activeWaypoints[waypointIndex];
     const dx = target.x - sprite.x;
     const dy = target.y - sprite.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
     if (dist < 3) {
-      // Reached waypoint
       sprite.x = target.x;
       sprite.y = target.y;
       waypointIndex++;
 
-      if (waypointIndex >= waypoints.length) {
-        // Arrived at register
-        arrived = true;
-        sprite.textures = idleFrames;
-        sprite.play();
+      if (waypointIndex >= activeWaypoints.length) {
+        if (exiting) {
+          exited = true;
+          sprite.stop();
+          sprite.visible = false;
+        } else if (sitting) {
+          sittingIdle = true;
+          sprite.textures = idleFrames;
+          sprite.play();
+          // Make sprite clickable so player can open the order modal
+          sprite.eventMode = 'static';
+          sprite.cursor = 'pointer';
+          sprite.on('pointerdown', () => {
+            if (clickCallback) clickCallback();
+          });
+        } else {
+          arrived = true;
+          sprite.textures = idleFrames;
+          sprite.play();
+        }
         return;
       }
     } else {
-      // Move toward waypoint
       const moveX = (dx / dist) * NPC_SPEED;
       const moveY = (dy / dist) * NPC_SPEED;
       sprite.x += moveX;
       sprite.y += moveY;
 
-      // Flip sprite based on horizontal movement
       if (moveX > 0.1) sprite.scale.x = SCALE;
       if (moveX < -0.1) sprite.scale.x = -SCALE;
     }
   }
 
-  return { sprite, update, arrived: () => arrived };
+  return {
+    sprite,
+    update,
+    arrived: () => arrived,
+    startExit,
+    hasExited: () => exited,
+    startSitting,
+    isSitting: () => sitting,
+    isSittingIdle: () => sittingIdle,
+    setOnClick,
+    getThumbnailTexture,
+  };
 }

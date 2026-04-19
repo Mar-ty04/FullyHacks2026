@@ -2,16 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Underwater Cafe</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <style>
     * { margin: 0; padding: 0; }
-    body { overflow: hidden; background: #1a1a2e; }
+    body { overflow: hidden; background: #1a1a2e; touch-action: none; }
     canvas { display: block; }
   </style>
 </head>
 <body>
+  <script>
+    // Prevent pinch-to-zoom and ctrl+scroll zoom
+    document.addEventListener('wheel', (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  </script>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
