@@ -71,7 +71,7 @@ const RESULT_SPRITE_CONFIG = {
 };
 
 // ── Main export ───────────────────────────────────────────────────────────────
-export async function createCraftingUI(app, onClose, onDrinkCrafted) {
+export async function createCraftingUI(app, onClose, onDrinkCrafted, getBalance, spendMoney) {
 
   // ── Texture loading ──────────────────────────────────────────────────────
   const rawCache = {};
@@ -203,6 +203,14 @@ export async function createCraftingUI(app, onClose, onDrinkCrafted) {
       style: { fontFamily: '"Press Start 2P"', fontSize: 8, fill: 0xffffff } });
     nameTxt.x = 44; nameTxt.y = ROW_H / 2 - 7;
     row.addChild(nameTxt);
+
+    const costTxt = new Text({ text: `$${ing.cost}`,
+      style: { fontFamily: '"Press Start 2P"', fontSize: 7, fill: 0xffd700 } });
+    costTxt.anchor.set(1, 0.5);
+    costTxt.x = LIST_W - 14;
+    costTxt.y = ROW_H / 2;
+    row.addChild(costTxt);
+
     itemsContainer.addChild(row);
   });
 
@@ -326,6 +334,7 @@ export async function createCraftingUI(app, onClose, onDrinkCrafted) {
       }
       slotNames[i].text = ing.name.split(' ')[0];
     } else { slotNames[i].text = ''; }
+    updateCostLabel();
   }
 
   slotGfxArr.forEach((g, i) => {
@@ -347,6 +356,24 @@ export async function createCraftingUI(app, onClose, onDrinkCrafted) {
   combineTxt.anchor.set(0.5);
   combineTxt.x = BTN_X + BTN_W / 2; combineTxt.y = BTN_Y + BTN_H / 2;
   panel.addChild(combineTxt);
+
+  const totalCostLabel = new Text({ text: 'Cost: $0',
+    style: { fontFamily: '"Press Start 2P"', fontSize: 7, fill: 0xffd700 } });
+  totalCostLabel.anchor.set(0.5, 0);
+  totalCostLabel.x = BTN_X + BTN_W / 2;
+  totalCostLabel.y = BTN_Y + BTN_H + 5;
+  panel.addChild(totalCostLabel);
+
+  function updateCostLabel() {
+    const total = slotContents.reduce((sum, id) => {
+      if (!id) return sum;
+      const ing = INGREDIENTS.find(x => x.id === id);
+      return sum + (ing ? (ing.cost || 0) : 0);
+    }, 0);
+    totalCostLabel.text = `Cost: $${total}`;
+    const canAfford = !getBalance || getBalance() >= total;
+    totalCostLabel.style.fill = total > 0 && !canAfford ? 0xff6655 : 0xffd700;
+  }
 
   // ── Recipes panel ─────────────────────────────────────────────────────────
   const recTitle = new Text({ text: 'RECIPES',
@@ -604,6 +631,20 @@ export async function createCraftingUI(app, onClose, onDrinkCrafted) {
       r.ingredients[2] === ids[2]
     );
     if (match) {
+      const totalCost = slotContents.reduce((sum, id) => {
+        if (!id) return sum;
+        const ing = INGREDIENTS.find(x => x.id === id);
+        return sum + (ing ? (ing.cost || 0) : 0);
+      }, 0);
+      if (totalCost > 0 && getBalance && getBalance() < totalCost) {
+        resultLabel.text = 'Not enough\nmoney!';
+        resultLabel.style.fill = 0xff6655;
+        resultLabel.style.fontSize = 8;
+        resultLabel.y = SLOT_Y - 4 + RESULT_SIZE / 2;
+        resultSprite.visible = false;
+        return;
+      }
+      if (totalCost > 0 && spendMoney) spendMoney(totalCost);
       resultLabel.style.fill = 0x44ffaa;
       const rTex = resultTextures[match.result];
       if (rTex) {
@@ -640,6 +681,7 @@ export async function createCraftingUI(app, onClose, onDrinkCrafted) {
     slotDots.forEach(d => d.clear());
     slotNames.forEach(t => { t.text = ''; });
     resetResult();
+    updateCostLabel();
     applyScroll(0);
   }
 
