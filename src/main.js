@@ -7,6 +7,8 @@ import { createCafeMap } from './maps/cafe.js';
 import { createPlayer } from './player.js';
 import { createNPC } from './npc.js';
 import { createOrderSystem, getRandomOrder } from './orderSystem.js';
+import { createCraftingUI } from './ui/craftingUI.js';
+import { createToolbar } from './ui/toolbar.js';
 
 const app = new Application();
 
@@ -256,13 +258,85 @@ async function init() {
 
   await transition.fadeOut();
 
+  // ── Crafting system (Vien) ──────────────────────────────────────────────
+  const toolbar = createToolbar(app);
+  app.stage.addChild(toolbar.container);
+
+  let gamePaused = false;
+  const craftingUI = await createCraftingUI(
+    app,
+    () => { gamePaused = false; },
+    (name, tex) => { toolbar.addDrink(name, tex); },
+  );
+  app.stage.addChild(craftingUI.container);
+
+  // Espresso machine interaction
+  const ESPRESSO_CX = 322;
+  const ESPRESSO_CY = 195;
+  const ESPRESSO_R  = 15;
+  let nearEspresso = false;
+
+  const pressEHint = new Text({
+    text: '[ E ] Craft',
+    style: { fontFamily: '"Press Start 2P"', fontSize: 8, fill: 0xffffff,
+             dropShadow: { color: 0x000000, blur: 0, distance: 1 } },
+  });
+  pressEHint.anchor.set(0.5, 1);
+  pressEHint.x = ESPRESSO_CX;
+  pressEHint.y = 65;
+  pressEHint.visible = false;
+  app.stage.addChild(pressEHint);
+
+  // Sink interaction (empties toolbar)
+  const SINK_CX = 538;
+  const SINK_CY = 195;
+  const SINK_R  = 15;
+  let nearSink = false;
+
+  const sinkHint = new Text({
+    text: '[ E ] Empty',
+    style: { fontFamily: '"Press Start 2P"', fontSize: 8, fill: 0xffffff,
+             dropShadow: { color: 0x000000, blur: 0, distance: 1 } },
+  });
+  sinkHint.anchor.set(0.5, 1);
+  sinkHint.x = SINK_CX;
+  sinkHint.y = 65;
+  sinkHint.visible = false;
+  app.stage.addChild(sinkHint);
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'e' || e.key === 'E') {
+      if (nearEspresso && !gamePaused) {
+        gamePaused = true;
+        craftingUI.open();
+      } else if (nearSink && !gamePaused) {
+        toolbar.clearAll();
+      }
+    } else if (e.key === 'Escape' && gamePaused) {
+      gamePaused = false;
+      craftingUI.close();
+    }
+  });
+
+  // ── Game loop ───────────────────────────────────────────────────────────
   app.ticker.add((ticker) => {
     const dt = ticker.deltaTime;
 
-    // Freeze player while any dialog is open
-    if (!orderSystem.isOpen() && !orderSystem.isSeatModalOpen()) {
+    // Freeze player while any dialog or crafting is open
+    if (!orderSystem.isOpen() && !orderSystem.isSeatModalOpen() && !gamePaused) {
       player.update();
     }
+
+    // Crafting proximity checks
+    const px = player.sprite.x;
+    const py = player.sprite.y;
+    const dex = px - ESPRESSO_CX, dey = py - ESPRESSO_CY;
+    nearEspresso = Math.sqrt(dex * dex + dey * dey) < ESPRESSO_R;
+    pressEHint.visible = nearEspresso && !gamePaused;
+
+    const dsx = px - SINK_CX, dsy = py - SINK_CY;
+    nearSink = Math.sqrt(dsx * dsx + dsy * dsy) < SINK_R;
+    sinkHint.visible = nearSink && !gamePaused;
 
     // Spawn timer: add new queue NPC every 8-20 seconds while space available
     spawnTimer += dt;
