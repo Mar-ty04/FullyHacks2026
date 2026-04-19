@@ -16,20 +16,14 @@ export async function createPlayer(app) {
   const fishTexture = await Assets.load('/sprites/FishFight/player/PlayerFishy(96x80).png');
   const source = fishTexture.source;
 
-  const anims = {
-    idleRight: getFrames(source, 0, 0, 1),
-    walkRight: getFrames(source, 0, 0, 11),
-    idleLeft: getFrames(source, 1, 0, 1),
-    walkLeft: getFrames(source, 1, 0, 6),
-  };
-  // Reuse for up/down for now
-  anims.walkUp = anims.walkRight;
-  anims.walkDown = anims.walkLeft;
+  // Row 1 is the walk cycle (6 frames) — use for both directions, flip for right
+  const walkFrames = getFrames(source, 1, 0, 6);
+  const idleFrames = getFrames(source, 1, 0, 1);
 
   const totalCols = Math.ceil(app.screen.width / TILE_SIZE);
   const totalRows = Math.ceil(app.screen.height / TILE_SIZE);
 
-  const sprite = new AnimatedSprite(anims.idleRight);
+  const sprite = new AnimatedSprite(idleFrames);
   sprite.anchor.set(0.5, 0.5);
   sprite.x = PATH_COLS * TILE_SIZE + (totalCols - PATH_COLS) * TILE_SIZE / 2;
   sprite.y = totalRows * TILE_SIZE / 2;
@@ -42,14 +36,8 @@ export async function createPlayer(app) {
   window.addEventListener('keydown', (e) => { keys[e.key] = true; });
   window.addEventListener('keyup', (e) => { keys[e.key] = false; });
 
-  let currentAnim = 'idleRight';
-
-  function setAnimation(name) {
-    if (currentAnim === name) return;
-    currentAnim = name;
-    sprite.textures = anims[name];
-    sprite.play();
-  }
+  let moving = false;
+  const SCALE = 1.2;
 
   function update() {
     let dx = 0;
@@ -69,28 +57,26 @@ export async function createPlayer(app) {
     sprite.y += dy * PLAYER_SPEED;
 
     // Clamp player to cafe area (right of NPC path)
-    const halfW = (FRAME_W * sprite.scale.x) / 2;
-    const halfH = (FRAME_H * sprite.scale.y) / 2;
+    const halfW = (FRAME_W * SCALE) / 2;
+    const halfH = (FRAME_H * SCALE) / 2;
     const cafeLeft = PATH_COLS * TILE_SIZE;
     sprite.x = Math.max(cafeLeft + halfW, Math.min(totalCols * TILE_SIZE - halfW, sprite.x));
     sprite.y = Math.max(halfH, Math.min(totalRows * TILE_SIZE - halfH, sprite.y));
 
-    // Animation state
-    if (dx === 0 && dy === 0) {
-      if (currentAnim.includes('Right') || currentAnim.includes('Up')) {
-        setAnimation('idleRight');
-      } else {
-        setAnimation('idleLeft');
-      }
-    } else if (dx > 0) {
-      setAnimation('walkRight');
-    } else if (dx < 0) {
-      setAnimation('walkLeft');
-    } else if (dy < 0) {
-      setAnimation('walkUp');
-    } else if (dy > 0) {
-      setAnimation('walkDown');
+    // Flip direction
+    if (dx > 0) sprite.scale.x = SCALE;
+    if (dx < 0) sprite.scale.x = -SCALE;
+
+    // Switch between walk and idle
+    const isMoving = dx !== 0 || dy !== 0;
+    if (isMoving && !moving) {
+      sprite.textures = walkFrames;
+      sprite.play();
+    } else if (!isMoving && moving) {
+      sprite.textures = idleFrames;
+      sprite.play();
     }
+    moving = isMoving;
   }
 
   return { sprite, update };
