@@ -1,16 +1,16 @@
 import { Container, Graphics, Text, TextStyle, Sprite } from 'pixi.js';
 import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
-
-const ORDERS = ['Americano', 'Frappuccino', 'Macchiato', 'Matcha Latte'];
+import { RECIPES } from './data/recipes.js';
 
 export function getRandomOrder() {
-  return ORDERS[Math.floor(Math.random() * ORDERS.length)];
+  const recipe = RECIPES[Math.floor(Math.random() * RECIPES.length)];
+  return recipe.result.replace('\n', ' ');
 }
 
 export function createOrderSystem(app) {
   let yesCount = 0;
   let noCount = 0;
-  let moneyAmount = 0;
+  let moneyAmount = 20;
   let dialogOpen = false;   // true while accepting Yes/No input
   let dialogFading = false; // true while container is fading in or out
   let selectedOption = 0;
@@ -46,7 +46,7 @@ export function createOrderSystem(app) {
   noText.x = 12;
   noText.y = 36;
   const moneyText = new Text({
-    text: 'Money: $0',
+    text: 'Money: $20',
     style: new TextStyle({ fill: 0xffd700, fontSize: 14, fontFamily: 'monospace' }),
   });
   moneyText.x = 12;
