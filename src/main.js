@@ -395,7 +395,7 @@ async function init() {
                   seatedCustomers.splice(scIdx, 1);
                 }
                 orderSystem.removeSeatedCustomer(capturedEntry.npc);
-                capturedEntry.npc.startExit();
+                capturedEntry.npc.startExit('right');
                 exitingNPCs.push(capturedEntry.npc);
               });
             });
