@@ -1,4 +1,4 @@
-import { Application, Container } from 'pixi.js';
+import { Application, Container, Assets, Sprite, Text, Graphics } from 'pixi.js';
 import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
 import { createStartPage } from './startpage.js';
 import { createPlayerSelect } from './playerselect.js';
@@ -164,6 +164,96 @@ async function init() {
 
   // Spawn the first NPC right away so the game isn't empty at start
   await spawnQueueNPC();
+
+  // Back button — top-left corner
+  const arrowTex = await Assets.load('/sprites/start-sprites/arrow.png');
+  const backBtn = new Sprite(arrowTex);
+  backBtn.scale.set(0.08);
+  backBtn.anchor.set(0.5);
+  backBtn.rotation = Math.PI;
+  backBtn.x = 12 + backBtn.width / 2;
+  backBtn.y = 12 + backBtn.height / 2;
+  backBtn.interactive = true;
+  backBtn.cursor = 'pointer';
+  backBtn.alpha = 0.7;
+  const backLabel = new Text({
+    text: 'return to start',
+    style: { fontFamily: '"Press Start 2P"', fontSize: 8, fill: 0x000000 },
+  });
+  backLabel.anchor.set(0, 0.5);
+  backLabel.x = backBtn.x + backBtn.width / 2 + 6;
+  backLabel.y = backBtn.y;
+  backLabel.alpha = 0.7;
+  app.stage.addChild(backLabel);
+
+  backBtn.on('pointerover', () => { backBtn.alpha = 1; backLabel.alpha = 1; });
+  backBtn.on('pointerout',  () => { backBtn.alpha = 0.7; backLabel.alpha = 0.7; });
+  backBtn.on('pointerdown', () => {
+    const W = app.screen.width;
+    const H = app.screen.height;
+
+    const popup = new Container();
+
+    const dim = new Graphics();
+    dim.rect(0, 0, W, H).fill({ color: 0x000000, alpha: 0.5 });
+    dim.interactive = true;
+    popup.addChild(dim);
+
+    const boxW = 320, boxH = 140;
+    const box = new Graphics();
+    box.rect(0, 0, boxW, boxH).fill(0xfff8f0);
+    box.rect(0, 0, boxW, boxH).stroke({ width: 3, color: 0x5c3a21 });
+    box.x = (W - boxW) / 2;
+    box.y = (H - boxH) / 2;
+    popup.addChild(box);
+
+    const msg = new Text({
+      text: 'Return to start?',
+      style: { fontFamily: '"Press Start 2P"', fontSize: 10, fill: 0x3a2010, wordWrap: true, wordWrapWidth: boxW - 40, align: 'center' },
+    });
+    msg.anchor.set(0.5);
+    msg.x = W / 2;
+    msg.y = H / 2 - 22;
+    popup.addChild(msg);
+
+    function makeBtn(label, color, onClick) {
+      const btn = new Container();
+      const bg = new Graphics();
+      bg.rect(0, 0, 100, 32).fill(color).stroke({ width: 2, color: 0x5c3a21 });
+      btn.addChild(bg);
+      const txt = new Text({ text: label, style: { fontFamily: '"Press Start 2P"', fontSize: 9, fill: 0xffffff } });
+      txt.anchor.set(0.5);
+      txt.x = 50; txt.y = 16;
+      btn.addChild(txt);
+      btn.interactive = true;
+      btn.cursor = 'pointer';
+      btn.on('pointerover', () => { bg.alpha = 0.8; });
+      btn.on('pointerout',  () => { bg.alpha = 1; });
+      btn.on('pointerdown', onClick);
+      return btn;
+    }
+
+    const yesBtn = makeBtn('YES', 0x5c3a21, async () => {
+      app.stage.removeChild(popup);
+      app.stage.addChild(transition.overlay);
+      await transition.fadeIn();
+      window.location.reload();
+    });
+    yesBtn.x = W / 2 - 115;
+    yesBtn.y = H / 2 + 18;
+    popup.addChild(yesBtn);
+
+    const noBtn = makeBtn('NO', 0x8aab5a, () => {
+      app.stage.removeChild(popup);
+      backBtn.interactive = true;
+    });
+    noBtn.x = W / 2 + 15;
+    noBtn.y = H / 2 + 18;
+    popup.addChild(noBtn);
+
+    app.stage.addChild(popup);
+  });
+  app.stage.addChild(backBtn);
 
   await transition.fadeOut();
 
