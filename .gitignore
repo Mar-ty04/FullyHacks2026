@@ -4,3 +4,4 @@ dist/
 ai_implementations/
 ai_instructions/
 *.DS_Store
+.env
