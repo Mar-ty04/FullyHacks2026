@@ -162,6 +162,32 @@ async function init() {
            player.sprite.y >= y && player.sprite.y <= y + h;
   }
 
+  // Synthesized cha-ching sound using Web Audio API — played when money is earned
+  function playChaChing() {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+
+    // Low "cha" hit
+    const osc1 = ctx.createOscillator();
+    const g1 = ctx.createGain();
+    osc1.connect(g1); g1.connect(ctx.destination);
+    osc1.frequency.setValueAtTime(880, now);
+    osc1.frequency.exponentialRampToValueAtTime(440, now + 0.08);
+    g1.gain.setValueAtTime(0.25, now);
+    g1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc1.start(now); osc1.stop(now + 0.12);
+
+    // High "ching" note
+    const osc2 = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    osc2.connect(g2); g2.connect(ctx.destination);
+    osc2.frequency.setValueAtTime(1760, now + 0.08);
+    osc2.frequency.exponentialRampToValueAtTime(1100, now + 0.45);
+    g2.gain.setValueAtTime(0.35, now + 0.08);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+    osc2.start(now + 0.08); osc2.stop(now + 0.5);
+  }
+
   // Spawn the first NPC right away so the game isn't empty at start
   await spawnQueueNPC();
 
@@ -305,25 +331,29 @@ async function init() {
         const capturedEntry = frontEntry;
         orderSystem.show(order, (decision) => {
           if (decision === 'yes') {
-            orderSystem.addMoney(20);
-
             const chairIndex = getRandomFreeChair();
             if (chairIndex !== -1) {
               occupiedChairs.add(chairIndex);
               const chairPos = map.chairPositions[chairIndex];
               capturedEntry.npc.startSitting(chairPos);
-              seatedCustomers.push({ npc: capturedEntry.npc, name: capturedEntry.name, order, chairIndex });
+              // Store decision so Mark as Done knows whether to award money
+              seatedCustomers.push({ npc: capturedEntry.npc, name: capturedEntry.name, order, chairIndex, decision });
               orderSystem.addSeatedCustomer(capturedEntry.npc, capturedEntry.name, order);
 
               capturedEntry.npc.setOnClick(() => {
                 orderSystem.showSeatModal({ name: capturedEntry.name, order }, () => {
                   const scIdx = seatedCustomers.findIndex(sc => sc.npc === capturedEntry.npc);
                   if (scIdx !== -1) {
+                    // Award money when order is completed (marked as done), not at dialog
+                    if (seatedCustomers[scIdx].decision === 'yes') {
+                      orderSystem.addMoney(20);
+                      playChaChing();
+                    }
                     occupiedChairs.delete(seatedCustomers[scIdx].chairIndex);
                     seatedCustomers.splice(scIdx, 1);
                   }
                   orderSystem.removeSeatedCustomer(capturedEntry.npc);
-                  capturedEntry.npc.startExit();
+                  capturedEntry.npc.startExit('right');
                   exitingNPCs.push(capturedEntry.npc);
                 });
               });
@@ -339,6 +369,13 @@ async function init() {
           }
 
           customerQueue.shift();
+          // Advance remaining queue members one slot forward so they fill the gap
+          for (const entry of customerQueue) {
+            entry.npc.advanceQueue();
+          }
+          dialogTriggered = false;
+        }, () => {
+          // Dismissed with X or Escape — NPC stays in queue, dialog can reopen
           dialogTriggered = false;
         });
       }
