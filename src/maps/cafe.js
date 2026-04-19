@@ -1,4 +1,4 @@
-import { Assets, Sprite, Texture, Container, Graphics, Rectangle } from 'pixi.js';
+import { Assets, Sprite, Texture, Container, Graphics, Rectangle, TilingSprite } from 'pixi.js';
 import { TILE_SIZE, PATH_ROWS } from '../constants.js';
 
 export async function createCafeMap(app) {
@@ -24,6 +24,19 @@ export async function createCafeMap(app) {
       container.addChild(tile);
     }
   }
+
+  // Wall strip along the top behind the counters
+  const wallTex = await Assets.load('/sprites/Cafe/Floors&Walls/wall1.png');
+  const wallTile = new Texture({ source: wallTex.source, frame: new Rectangle(0, 0, 48, 48) });
+  const wallStrip = new TilingSprite({ texture: wallTile, width: app.screen.width, height: 140 });
+  wallStrip.x = 0;
+  wallStrip.y = 0;
+  container.addChild(wallStrip);
+
+  const wallBorder = new Graphics();
+  wallBorder.moveTo(0, 140).lineTo(app.screen.width, 140);
+  wallBorder.stroke({ width: 3, color: 0x5c3a21 });
+  container.addChild(wallBorder);
 
   // Path boundary line
   const boundary = new Graphics();
@@ -100,6 +113,70 @@ export async function createCafeMap(app) {
   banner.y = 185;
   banner.scale.set(0.35);
   container.addChild(banner);
+
+  // Round table under first bar
+  const roundTableTex = await Assets.load('/sprites/Cafe/Sprite/326.png');
+  const roundTable = new Sprite(roundTableTex);
+  roundTable.x = 415;
+  roundTable.y = 360;
+  roundTable.scale.set(0.25);
+  container.addChild(roundTable);
+
+  // Second round table below the first
+  const roundTable2 = new Sprite(roundTableTex);
+  roundTable2.x = 415;
+  roundTable2.y = 480;
+  roundTable2.scale.set(0.25);
+  container.addChild(roundTable2);
+
+  // Stools left and right of each round table
+  const stoolTex = await Assets.load('/sprites/Cafe/Sprite/327.png');
+  const stoolScale = 0.2;
+  const rtScale = 0.25;
+  const rtW = Math.round(roundTableTex.width * rtScale);
+  const rtH = Math.round(roundTableTex.height * rtScale);
+  const stoolW = Math.round(stoolTex.width * stoolScale);
+  const stoolH = Math.round(stoolTex.height * stoolScale);
+  const gap = 4;
+
+  for (const [rtX, rtY] of [[415, 360], [415, 480]]) {
+    const stoolCenterY = rtY + Math.round(rtH / 2) - Math.round(stoolH / 2) + 8;
+    const leftStool = new Sprite(stoolTex);
+    leftStool.x = rtX - stoolW - gap;
+    leftStool.y = stoolCenterY;
+    leftStool.scale.set(stoolScale);
+    container.addChild(leftStool);
+
+    const rightStool = new Sprite(stoolTex);
+    rightStool.x = rtX + rtW + gap;
+    rightStool.y = stoolCenterY;
+    rightStool.scale.set(stoolScale);
+    container.addChild(rightStool);
+  }
+
+  // Couch to the right of the first round table's right stool
+  const couchTex = await Assets.load('/sprites/Cafe/Sprite/37.png');
+  const coffeeTableTex = await Assets.load('/sprites/Cafe/Sprite/221.png');
+  const firstRtRightEdge = 415 + Math.round(roundTableTex.width * rtScale) + gap + Math.round(stoolTex.width * stoolScale);
+  const couch = new Sprite(couchTex);
+  couch.x = firstRtRightEdge + 110;
+  couch.y = 370;
+  couch.scale.set(0.35);
+
+  // Coffee table added first so couch renders on top
+  const coffeeTable = new Sprite(coffeeTableTex);
+  coffeeTable.x = couch.x - 24;
+  coffeeTable.y = couch.y + Math.round(couchTex.height * 0.35) - 10;
+  coffeeTable.scale.set(0.35);
+  const displayTex = await Assets.load('/sprites/Cafe/Sprite/14.png');
+  const display = new Sprite(displayTex);
+  display.x = couch.x + 8;
+  display.y = couch.y + Math.round(couchTex.height * 0.35) + 30;
+  display.scale.set(0.35);
+
+  container.addChild(coffeeTable);
+  container.addChild(display);
+  container.addChild(couch);
 
   // Espresso machine on top of second counter
   const espressoTex = await Assets.load('/sprites/Cafe/Sprite/233.png');
