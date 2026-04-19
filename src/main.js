@@ -14,6 +14,50 @@ import { createSettingsUI } from './ui/settingsUI.js';
 
 const app = new Application();
 
+// ── Background music ──────────────────────────────────────────────────────────
+function initBgMusic() {
+  return new Promise((resolve) => {
+    const div = document.createElement('div');
+    div.id = 'yt-bg';
+    div.style.cssText = 'position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;pointer-events:none;';
+    document.body.appendChild(div);
+
+    window.onYouTubeIframeAPIReady = () => {
+      // eslint-disable-next-line no-undef
+      new YT.Player('yt-bg', {
+        videoId: 'VPFxZw5qUwE',
+        playerVars: { autoplay: 1, loop: 1, playlist: 'VPFxZw5qUwE', controls: 0, mute: 1 },
+        events: {
+          onReady(e) {
+            e.target.mute();
+            e.target.playVideo();
+            resolve(e.target);
+          },
+        },
+      });
+    };
+
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+  });
+}
+
+function fadeInMusic(player, targetVol = 32, ms = 3500) {
+  if (!player) return;
+  player.unMute();
+  player.setVolume(0);
+  const steps = 70;
+  const stepMs = ms / steps;
+  let step = 0;
+  const id = setInterval(() => {
+    step++;
+    const t = step / steps;
+    player.setVolume(Math.round(targetVol * (t * t)));
+    if (step >= steps) clearInterval(id);
+  }, stepMs);
+}
+
 async function init() {
   // Load pixel font before anything renders
   await document.fonts.load('16px "Press Start 2P"');
@@ -353,6 +397,11 @@ async function init() {
   // ── Settings UI ─────────────────────────────────────────────────────────
   const settingsUI = createSettingsUI(app);
   app.stage.addChild(settingsUI.container);
+
+  // ── Background music — start loading, fade in once ready ───────────────
+  const musicPromise = initBgMusic().catch(() => null);
+  musicPromise.then(player => { if (player) settingsUI.setPlayer(player); });
+  musicPromise.then(player => { if (player) fadeInMusic(player); });
 
   // ── Crafting system (Vien) ──────────────────────────────────────────────
   const toolbar = createToolbar(app);
