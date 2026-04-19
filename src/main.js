@@ -1,4 +1,4 @@
-import { Application, Container } from 'pixi.js';
+import { Application, Container, Text } from 'pixi.js';
 import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
 import { createStartPage } from './startpage.js';
 import { createPlayerSelect } from './playerselect.js';
@@ -6,6 +6,7 @@ import { createTransition } from './transition.js';
 import { createCafeMap } from './maps/cafe.js';
 import { createPlayer } from './player.js';
 import { createNPC } from './npc.js';
+import { createCraftingUI } from './ui/craftingUI.js';
 
 const app = new Application();
 
@@ -116,18 +117,55 @@ async function init() {
 
   await transition.fadeOut();
 
+  // Crafting UI — sits above everything
+  let gamePaused = false;
+  const craftingUI = await createCraftingUI(app, () => { gamePaused = false; });
+  app.stage.addChild(craftingUI.container);
+
+  // "Press E" hint above the espresso machine
+  const pressEHint = new Text({
+    text: '[ E ] Craft',
+    style: { fontFamily: '"Press Start 2P"', fontSize: 8, fill: 0xffffff,
+             dropShadow: { color: 0x000000, blur: 0, distance: 1 } },
+  });
+  pressEHint.anchor.set(0.5, 1);
+  pressEHint.x = 322;
+  pressEHint.y = 168;
+  pressEHint.visible = false;
+  app.stage.addChild(pressEHint);
+
+  // Espresso interaction zone (player stands in front of counter)
+  const ESPRESSO_CX = 322;
+  const ESPRESSO_CY = 195;
+  const INTERACT_R  = 25;
+  let nearEspresso = false;
+
+  window.addEventListener('keydown', (e) => {
+    if ((e.key === 'e' || e.key === 'E') && nearEspresso && !gamePaused) {
+      gamePaused = true;
+      craftingUI.open();
+    } else if (e.key === 'Escape' && gamePaused) {
+      gamePaused = false;
+      craftingUI.close();
+    }
+  });
+
   // Game loop
   app.ticker.add(() => {
-    player.update();
+    if (!gamePaused) player.update();
     npc.update();
+
+    // Proximity check for espresso machine
+    const dx = player.sprite.x - ESPRESSO_CX;
+    const dy = player.sprite.y - ESPRESSO_CY;
+    nearEspresso = Math.sqrt(dx * dx + dy * dy) < INTERACT_R;
+    pressEHint.visible = nearEspresso && !gamePaused;
 
     // Depth sort using zIndex
     for (const child of gameContainer.children) {
       if (child.anchor && child.anchor.y > 0) {
-        // Player/NPC: sort by y (center of sprite)
         child.zIndex = child.y;
       } else {
-        // Furniture: sort by bottom edge
         child.zIndex = child.y + child.height;
       }
     }
