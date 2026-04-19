@@ -20,6 +20,23 @@ function getFrames(source, row, count) {
   return frames;
 }
 
+function makeArrow(direction) {
+  const g = new Graphics();
+  const s = 40;
+  if (direction === 'left') {
+    g.moveTo(s, 0).lineTo(0, s / 2).lineTo(s, s).closePath();
+  } else {
+    g.moveTo(0, 0).lineTo(s, s / 2).lineTo(0, s).closePath();
+  }
+  g.fill(0xffffff);
+  g.pivot.set(s / 2, s / 2);
+  g.interactive = true;
+  g.cursor = 'pointer';
+  g.on('pointerover', () => { g.alpha = 0.6; });
+  g.on('pointerout',  () => { g.alpha = 1.0; });
+  return g;
+}
+
 export async function createPlayerSelect(app) {
   const container = new Container();
   const w = app.screen.width;
@@ -38,63 +55,69 @@ export async function createPlayerSelect(app) {
 
   const title = new Text({
     text: 'Choose Your Fish!',
-    style: { fontFamily: '"Press Start 2P"', fontSize: 42, fill: 0xffffff, dropShadow: { color: 0x000000, blur: 0, distance: 3 } },
+    style: { fontFamily: '"Press Start 2P"', fontSize: 36, fill: 0xffffff, dropShadow: { color: 0x000000, blur: 0, distance: 3 } },
   });
   title.anchor.set(0.5);
   title.x = w / 2;
   title.y = h * 0.1;
   container.addChild(title);
 
-  // Grid: 3 columns x 2 rows
-  const colXs = [w * 0.2, w * 0.5, w * 0.8];
-  const rowYs = [h * 0.38, h * 0.66];
-
   let selected = 0;
 
-  const highlight = new Graphics();
-  container.addChild(highlight);
-
-  const cards = PLAYERS.map((player, i) => {
-    const x = colXs[i % 3];
-    const y = rowYs[Math.floor(i / 3)];
-
+  // Preload all sprites, show only the selected one
+  const fishSprites = PLAYERS.map((_, i) => {
     const source = playerTextures[i].source;
     const sprite = new AnimatedSprite(getFrames(source, 0, 11));
     sprite.anchor.set(0.5);
-    sprite.scale.set(2.2);
+    sprite.scale.set(3.5);
     sprite.animationSpeed = 0.12;
+    sprite.x = w / 2;
+    sprite.y = h * 0.45;
+    sprite.visible = i === 0;
     sprite.play();
-    sprite.x = x;
-    sprite.y = y;
-    sprite.interactive = true;
-    sprite.cursor = 'pointer';
     container.addChild(sprite);
-
-    const label = new Text({
-      text: player.name,
-      style: { fontFamily: 'Arial', fontSize: 22, fontWeight: 'bold', fill: 0xffffff, dropShadow: { color: 0x000000, blur: 4, distance: 2 } },
-    });
-    label.anchor.set(0.5);
-    label.x = x;
-    label.y = y + FRAME_H * 2.2 / 2 + 14;
-    container.addChild(label);
-
-    sprite.on('pointerdown', () => { selected = i; updateHighlight(); });
-
-    return { sprite, label, x, y };
+    return sprite;
   });
 
-  function updateHighlight() {
-    const card = cards[selected];
-    const scale = card.sprite.scale.x;
-    const hw = FRAME_W * scale / 2 + 12;
-    const hh = FRAME_H * scale / 2 + 12;
-    highlight.clear();
-    highlight.rect(card.x - hw, card.y - hh, hw * 2, hh * 2);
-    highlight.stroke({ width: 4, color: 0xffdd44 });
+  const nameLabel = new Text({
+    text: PLAYERS[0].name,
+    style: { fontFamily: '"Press Start 2P"', fontSize: 18, fill: 0xffffff, dropShadow: { color: 0x000000, blur: 0, distance: 2 } },
+  });
+  nameLabel.anchor.set(0.5);
+  nameLabel.x = w / 2;
+  nameLabel.y = h * 0.65;
+  container.addChild(nameLabel);
+
+  // Counter e.g. "1 / 6"
+  const counter = new Text({
+    text: `1 / ${PLAYERS.length}`,
+    style: { fontFamily: '"Press Start 2P"', fontSize: 12, fill: 0xaaaaaa },
+  });
+  counter.anchor.set(0.5);
+  counter.x = w / 2;
+  counter.y = h * 0.72;
+  container.addChild(counter);
+
+  const leftArrow = makeArrow('left');
+  leftArrow.x = w * 0.15;
+  leftArrow.y = h * 0.45;
+  container.addChild(leftArrow);
+
+  const rightArrow = makeArrow('right');
+  rightArrow.x = w * 0.85;
+  rightArrow.y = h * 0.45;
+  container.addChild(rightArrow);
+
+  function showFish(index) {
+    fishSprites[selected].visible = false;
+    selected = (index + PLAYERS.length) % PLAYERS.length;
+    fishSprites[selected].visible = true;
+    nameLabel.text = PLAYERS[selected].name;
+    counter.text = `${selected + 1} / ${PLAYERS.length}`;
   }
 
-  updateHighlight();
+  leftArrow.on('pointerdown', () => showFish(selected - 1));
+  rightArrow.on('pointerdown', () => showFish(selected + 1));
 
   const button = new Sprite(btnTexture);
   button.anchor.set(0.5);
