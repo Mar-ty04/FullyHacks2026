@@ -12,7 +12,7 @@ function getFrames(source, row, startCol, count) {
   return frames;
 }
 
-export async function createPlayer(app, spritePath = '/sprites/FishFight/player/PlayerFishy(96x80).png') {
+export async function createPlayer(app, spritePath = '/sprites/FishFight/player/PlayerFishy(96x80).png', colliders = []) {
   const fishTexture = await Assets.load(spritePath);
   const source = fishTexture.source;
 
@@ -26,8 +26,9 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
 
   const sprite = new AnimatedSprite(idleFrames);
   sprite.anchor.set(0.5, 0.5);
-  sprite.x = totalCols * TILE_SIZE / 2;
-  sprite.y = (totalRows - PATH_ROWS) * TILE_SIZE / 2;
+  // Spawn in the open area (right side, lower half of cafe)
+  sprite.x = totalCols * TILE_SIZE * 0.75;
+  sprite.y = (totalRows - PATH_ROWS) * TILE_SIZE * 0.7;
   sprite.scale.set(1.2);
   sprite.animationSpeed = 0.15;
   sprite.play();
@@ -54,15 +55,38 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
       dy *= 0.707;
     }
 
-    sprite.x += dx * PLAYER_SPEED;
-    sprite.y += dy * PLAYER_SPEED;
+    const newX = sprite.x + dx * PLAYER_SPEED;
+    const newY = sprite.y + dy * PLAYER_SPEED;
 
-    // Clamp player to cafe area (above NPC path)
+    // Clamp to cafe area (above NPC path)
     const halfW = (FRAME_W * SCALE) / 2;
     const halfH = (FRAME_H * SCALE) / 2;
     const cafeBottom = (totalRows - PATH_ROWS) * TILE_SIZE;
-    sprite.x = Math.max(halfW, Math.min(totalCols * TILE_SIZE - halfW, sprite.x));
-    sprite.y = Math.max(halfH, Math.min(cafeBottom - halfH, sprite.y));
+    const clampedX = Math.max(halfW, Math.min(totalCols * TILE_SIZE - halfW, newX));
+    const clampedY = Math.max(halfH, Math.min(cafeBottom - halfH, newY));
+
+    // Player collision box (smaller than sprite — use feet area)
+    const playerW = 30;
+    const playerH = 20;
+
+    function collidesAt(px, py) {
+      const left = px - playerW / 2;
+      const top = py + halfH - playerH;
+      for (const c of colliders) {
+        if (left < c.x + c.w && left + playerW > c.x && top < c.y + c.h && top + playerH > c.y) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Try moving on each axis independently
+    if (!collidesAt(clampedX, sprite.y)) {
+      sprite.x = clampedX;
+    }
+    if (!collidesAt(sprite.x, clampedY)) {
+      sprite.y = clampedY;
+    }
 
     // Flip direction
     if (dx > 0) sprite.scale.x = SCALE;

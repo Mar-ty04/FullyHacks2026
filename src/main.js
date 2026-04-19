@@ -1,4 +1,4 @@
-import { Application } from 'pixi.js';
+import { Application, Container } from 'pixi.js';
 import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
 import { createStartPage } from './startpage.js';
 import { createPlayerSelect } from './playerselect.js';
@@ -89,23 +89,40 @@ async function init() {
   await transition.fadeIn();
   app.stage.removeChild(playerSelect.container);
 
-  // Load map + player
-  const [map, player] = await Promise.all([
-    createCafeMap(app),
-    createPlayer(app, selectedPath),
-  ]);
-  app.stage.addChildAt(map.container, 0);
-  app.stage.addChildAt(player.sprite, 1);
-  await transition.fadeOut();
+  // Load map
+  const map = await createCafeMap(app);
+  app.stage.addChildAt(map.floorContainer, 0);
+
+  // Game objects container — depth sorted by y each frame
+  const gameContainer = new Container();
+  app.stage.addChildAt(gameContainer, 1);
+
+  // Add furniture to game container
+  for (const f of map.furniture) {
+    gameContainer.addChild(f);
+  }
+
+  // Load player with colliders
+  const player = await createPlayer(app, selectedPath, map.colliders);
+  gameContainer.addChild(player.sprite);
 
   // Spawn an NPC
   const npc = await createNPC(app, map.registerBounds, map.pathStartRow);
-  app.stage.addChildAt(npc.sprite, 1);
+  gameContainer.addChild(npc.sprite);
+
+  await transition.fadeOut();
 
   // Game loop
   app.ticker.add(() => {
     player.update();
     npc.update();
+
+    // Depth sort — objects with higher y (lower on screen) render on top
+    gameContainer.children.sort((a, b) => {
+      const aBottom = a.y + (a.height * (1 - a.anchor?.y ?? 0));
+      const bBottom = b.y + (b.height * (1 - b.anchor?.y ?? 0));
+      return aBottom - bBottom;
+    });
   });
 }
 
