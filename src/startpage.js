@@ -1,4 +1,22 @@
 import { Assets, Sprite, Container, AnimatedSprite, Texture, Rectangle } from 'pixi.js';
+import { sfx } from './audio.js';
+
+function playButtonClick() {
+  if (!sfx.enabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.connect(g); g.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(520, now);
+    osc.frequency.exponentialRampToValueAtTime(880, now + 0.06);
+    g.gain.setValueAtTime(0.28, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    osc.start(now); osc.stop(now + 0.18);
+  } catch (_) {}
+}
 
 function getFrames(source, fw, fh, count) {
   const frames = [];
@@ -101,9 +119,21 @@ export async function createStartPage(app) {
 
   const waitForStart = () => new Promise((resolve) => {
     button.once('pointerdown', () => {
-      app.renderer.off('resize', layout);
-      app.ticker.remove(ticker);
-      resolve();
+      playButtonClick();
+      // Scale pulse: swell up then snap back
+      const BASE = 0.45;
+      let t = 0;
+      const pulse = (tk) => {
+        t += tk.deltaTime;
+        button.scale.set(BASE + Math.sin(Math.min(t / 10, 1) * Math.PI) * 0.06);
+        if (t >= 10) { button.scale.set(BASE); app.ticker.remove(pulse); }
+      };
+      app.ticker.add(pulse);
+      setTimeout(() => {
+        app.renderer.off('resize', layout);
+        app.ticker.remove(ticker);
+        resolve();
+      }, 120);
     });
   });
 

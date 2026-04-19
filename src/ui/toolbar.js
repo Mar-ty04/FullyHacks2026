@@ -1,12 +1,14 @@
 import { Container, Graphics, Text, Sprite, Texture } from 'pixi.js';
+import { sfx } from '../audio.js';
 
-const SLOT_SIZE = 46;
-const SLOT_GAP  = 3;
-const NUM_SLOTS = 9;
-const PAD       = 7;
+const SLOT_SIZE  = 46;
+const SLOT_GAP   = 3;
+const NUM_SLOTS  = 9;
+const PAD        = 7;
+const NAME_H     = 13; // extra height for drink name label
 
 const BAR_W = NUM_SLOTS * SLOT_SIZE + (NUM_SLOTS - 1) * SLOT_GAP + PAD * 2;
-const BAR_H = SLOT_SIZE + PAD * 2;
+const BAR_H = SLOT_SIZE + PAD * 2 + NAME_H;
 
 export function createToolbar(app) {
   const BAR_X     = Math.round((app.screen.width - BAR_W) / 2);
@@ -31,6 +33,13 @@ export function createToolbar(app) {
   const slotGfxArr   = [];
   const slotSprArr   = [];
   const slotCountArr = [];
+  const slotNameArr  = [];
+
+  // Truncate to fit inside slot width at 5px pixel font (~6px per char)
+  function shortName(name) {
+    const s = name.replace('\n', ' ');
+    return s.length <= 9 ? s : s.slice(0, 8) + '.';
+  }
 
   for (let i = 0; i < NUM_SLOTS; i++) {
     const sx = PAD + i * (SLOT_SIZE + SLOT_GAP);
@@ -56,6 +65,15 @@ export function createToolbar(app) {
     cnt.y = sy + SLOT_SIZE - 1;
     container.addChild(cnt);
     slotCountArr.push(cnt);
+
+    const nameLbl = new Text({ text: '',
+      style: { fontFamily: '"Press Start 2P"', fontSize: 5, fill: 0xaaccee,
+               dropShadow: { color: 0x000000, blur: 0, distance: 1 } } });
+    nameLbl.anchor.set(0.5, 0);
+    nameLbl.x = sx + SLOT_SIZE / 2;
+    nameLbl.y = sy + SLOT_SIZE + 3;
+    container.addChild(nameLbl);
+    slotNameArr.push(nameLbl);
   }
 
   // ── Dock slide animation ──────────────────────────────────────────────────
@@ -81,9 +99,10 @@ export function createToolbar(app) {
     const sx = PAD + i * (SLOT_SIZE + SLOT_GAP);
     const sy = PAD;
     const slot = slots[i];
-    const bg  = slotGfxArr[i];
-    const spr = slotSprArr[i];
-    const cnt = slotCountArr[i];
+    const bg      = slotGfxArr[i];
+    const spr     = slotSprArr[i];
+    const cnt     = slotCountArr[i];
+    const nameLbl = slotNameArr[i];
 
     bg.clear();
     bg.roundRect(sx, sy, SLOT_SIZE, SLOT_SIZE, 5);
@@ -104,9 +123,11 @@ export function createToolbar(app) {
         spr.visible = false;
       }
       cnt.text = slot.count > 1 ? String(slot.count) : '';
+      nameLbl.text = shortName(slot.name);
     } else {
       spr.visible = false;
       cnt.text = '';
+      nameLbl.text = '';
     }
   }
 
@@ -125,6 +146,7 @@ export function createToolbar(app) {
   }
 
   function playEmptySound() {
+    if (!sfx.enabled) return;
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const master = ctx.createGain();

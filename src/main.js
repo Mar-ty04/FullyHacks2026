@@ -9,8 +9,55 @@ import { createNPC } from './npc.js';
 import { createOrderSystem, getRandomOrder } from './orderSystem.js';
 import { createCraftingUI } from './ui/craftingUI.js';
 import { createToolbar } from './ui/toolbar.js';
+import { createSettingsUI } from './ui/settingsUI.js';
+import { sfx } from './audio.js';
 
 const app = new Application();
+
+// ── Background music ──────────────────────────────────────────────────────────
+function initBgMusic() {
+  return new Promise((resolve) => {
+    const div = document.createElement('div');
+    div.id = 'yt-bg';
+    div.style.cssText = 'position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;pointer-events:none;';
+    document.body.appendChild(div);
+
+    window.onYouTubeIframeAPIReady = () => {
+      // eslint-disable-next-line no-undef
+      new YT.Player('yt-bg', {
+        videoId: 'VPFxZw5qUwE',
+        playerVars: { autoplay: 1, loop: 1, playlist: 'VPFxZw5qUwE', controls: 0, mute: 1 },
+        events: {
+          onReady(e) {
+            e.target.mute();
+            e.target.playVideo();
+            resolve(e.target);
+          },
+        },
+      });
+    };
+
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+  });
+}
+
+function fadeInMusic(player, targetVol = 32, ms = 3500) {
+  if (!player) return;
+  player.unMute();
+  player.setVolume(0);
+  const steps = 70;
+  const stepMs = ms / steps;
+  let step = 0;
+  const id = setInterval(() => {
+    step++;
+    // ease-in curve: slow start, speeds up
+    const t = step / steps;
+    player.setVolume(Math.round(targetVol * (t * t)));
+    if (step >= steps) clearInterval(id);
+  }, stepMs);
+}
 
 async function init() {
   // Load pixel font before anything renders
@@ -74,18 +121,32 @@ async function init() {
   }
 
   const transition = createTransition(app);
-  app.stage.addChild(transition.overlay);
+
+  // Begin loading music silently — muted autoplay is allowed before user gesture
+  const musicPromise = initBgMusic().catch(() => null);
+
+  // Settings UI lives on every screen — always layered just below the fade overlay
+  const settingsUI = createSettingsUI(app);
+  musicPromise.then(player => { if (player) settingsUI.setPlayer(player); });
 
   const startPage = await createStartPage(app);
   app.stage.addChildAt(startPage.container, 0);
+  app.stage.addChild(settingsUI.container);
+  app.stage.addChild(transition.overlay);
   await transition.fadeOut();
 
   await startPage.waitForStart();
+
+  // User just clicked — safe to unmute; fade in over 3.5s during the transition
+  musicPromise.then(player => { if (player) fadeInMusic(player); });
+
   await transition.fadeIn();
   app.stage.removeChild(startPage.container);
 
   const playerSelect = await createPlayerSelect(app);
   app.stage.addChildAt(playerSelect.container, 0);
+  app.stage.addChild(settingsUI.container);
+  app.stage.addChild(transition.overlay);
   await transition.fadeOut();
 
   const selectedPath = await playerSelect.waitForSelect();
@@ -165,6 +226,7 @@ async function init() {
 
   // Synthesized cha-ching sound using Web Audio API — played when money is earned
   function playChaChing() {
+    if (!sfx.enabled) return;
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const now = ctx.currentTime;
 
@@ -343,14 +405,21 @@ async function init() {
     if (occupiedChairs.size >= map.chairPositions.length) return;
     const front = customerQueue[0];
     if (!front.npc.arrived() || !playerNearCounter()) return;
+    playInteractSound();
     openOrderDialog(front);
   });
 
+  // Re-layer settings + fade overlay on top of all game UI
+  app.stage.addChild(settingsUI.container);
+  app.stage.addChild(transition.overlay);
   await transition.fadeOut();
 
   // ── Crafting system (Vien) ──────────────────────────────────────────────
   const toolbar = createToolbar(app);
   app.stage.addChild(toolbar.container);
+  // Keep settings above toolbar but below transition overlay
+  app.stage.addChild(settingsUI.container);
+  app.stage.addChild(transition.overlay);
 
   let gamePaused = false;
   const craftingUI = await createCraftingUI(
@@ -400,12 +469,34 @@ async function init() {
   sinkHint.visible = false;
   app.stage.addChild(sinkHint);
 
+  function playInteractSound() {
+    if (!sfx.enabled) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+      // Short two-tone blip: low then high
+      [320, 560].forEach((freq, i) => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'square';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.12, now + i * 0.055);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.055 + 0.09);
+        osc.start(now + i * 0.055);
+        osc.stop(now  + i * 0.055 + 0.09);
+      });
+    } catch (_) {}
+  }
+
   window.addEventListener('keydown', (e) => {
     if (e.key === 'e' || e.key === 'E') {
       if (nearEspresso && !gamePaused) {
+        playInteractSound();
         gamePaused = true;
         craftingUI.open();
       } else if (nearSink && !gamePaused) {
+        playInteractSound();
         toolbar.clearAll();
       }
     } else if (e.key === 'Escape' && gamePaused) {

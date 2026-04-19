@@ -1,4 +1,39 @@
 import { Assets, AnimatedSprite, Texture, Rectangle, Container, Graphics, Text, Sprite } from 'pixi.js';
+import { sfx } from './audio.js';
+
+function playButtonClick() {
+  if (!sfx.enabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.connect(g); g.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(520, now);
+    osc.frequency.exponentialRampToValueAtTime(880, now + 0.06);
+    g.gain.setValueAtTime(0.28, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    osc.start(now); osc.stop(now + 0.18);
+  } catch (_) {}
+}
+
+function playArrowClick() {
+  if (!sfx.enabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.connect(g); g.connect(ctx.destination);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(560, now + 0.05);
+    g.gain.setValueAtTime(0.18, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    osc.start(now); osc.stop(now + 0.1);
+  } catch (_) {}
+}
 
 const FRAME_W = 96;
 const FRAME_H = 80;
@@ -119,8 +154,8 @@ export async function createPlayerSelect(app) {
     counter.text = `${selected + 1} / ${PLAYERS.length}`;
   }
 
-  leftArrow.on('pointerdown', () => showFish(selected - 1));
-  rightArrow.on('pointerdown', () => showFish(selected + 1));
+  leftArrow.on('pointerdown',  () => { playArrowClick(); showFish(selected - 1); });
+  rightArrow.on('pointerdown', () => { playArrowClick(); showFish(selected + 1); });
 
   const button = new Sprite(btnTexture);
   button.anchor.set(0.5);
@@ -132,7 +167,18 @@ export async function createPlayerSelect(app) {
   container.addChild(button);
 
   const waitForSelect = () => new Promise((resolve) => {
-    button.once('pointerdown', () => resolve(PLAYERS[selected].path));
+    button.once('pointerdown', () => {
+      playButtonClick();
+      const BASE = 0.45;
+      let t = 0;
+      const pulse = (tk) => {
+        t += tk.deltaTime;
+        button.scale.set(BASE + Math.sin(Math.min(t / 10, 1) * Math.PI) * 0.06);
+        if (t >= 10) { button.scale.set(BASE); app.ticker.remove(pulse); }
+      };
+      app.ticker.add(pulse);
+      setTimeout(() => resolve(PLAYERS[selected].path), 120);
+    });
   });
 
   return { container, waitForSelect };

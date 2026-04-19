@@ -1,6 +1,7 @@
 import { Container, Graphics, Text, TextStyle, Sprite } from 'pixi.js';
 import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
 import { RECIPES } from './data/recipes.js';
+import { sfx } from './audio.js';
 
 export function getRandomOrder() {
   const recipe = RECIPES[Math.floor(Math.random() * RECIPES.length)];
@@ -209,7 +210,29 @@ export function createOrderSystem(app) {
   markDoneText.y = markDoneBg.y + 10;
   seatModalContainer.addChild(markDoneText);
 
+  function playReceiveSound() {
+    if (!sfx.enabled) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+      // Warm two-note chime: fifth interval
+      [[440, 0], [660, 0.1], [880, 0.2]].forEach(([freq, delay]) => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, now + delay);
+        gain.gain.linearRampToValueAtTime(0.2, now + delay + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.35);
+        osc.start(now + delay);
+        osc.stop(now + delay + 0.36);
+      });
+    } catch (_) {}
+  }
+
   function fireMarkDone() {
+    playReceiveSound();
     if (seatModalOnDone) seatModalOnDone();
     hideSeatModal();
   }
@@ -319,12 +342,67 @@ export function createOrderSystem(app) {
     if (selectedOption === 1) noBg.stroke({ width: 2, color: 0xffd700 });
   }
 
+  function playAcceptSound() {
+    if (!sfx.enabled) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+      [523, 659, 784, 1047].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const g   = ctx.createGain();
+        osc.connect(g); g.connect(ctx.destination);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + i * 0.07);
+        g.gain.setValueAtTime(0, now + i * 0.07);
+        g.gain.linearRampToValueAtTime(0.22, now + i * 0.07 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.2);
+        osc.start(now + i * 0.07);
+        osc.stop(now + i * 0.07 + 0.22);
+      });
+    } catch (_) {}
+  }
+
+  function spawnAcceptEffect() {
+    // Green flash overlay on the dialog
+    const flash = new Graphics();
+    flash.roundRect(3, 3, DIALOG_W - 6, DIALOG_H - 6, 12);
+    flash.fill({ color: 0x44ff88, alpha: 0.4 });
+    dialogContainer.addChild(flash);
+
+    // Floating confirmation text on stage
+    const floatTxt = new Text({ text: 'Order received!',
+      style: new TextStyle({ fill: 0x66ff99, fontSize: 14, fontFamily: '"Press Start 2P"',
+        dropShadow: { color: 0x003300, blur: 0, distance: 2 } }) });
+    floatTxt.anchor.set(0.5);
+    floatTxt.x = dialogContainer.x + yesBg.x + 55;
+    floatTxt.y = dialogContainer.y + yesBg.y + 10;
+    app.stage.addChild(floatTxt);
+
+    let t = 0;
+    const fx = (ticker) => {
+      t += ticker.deltaTime;
+      // Flash fades quickly
+      if (flash.parent) flash.alpha = Math.max(0, 1 - t / 14);
+      // Float text rises + fades
+      floatTxt.y -= 1.2;
+      floatTxt.alpha = Math.max(0, 1 - t / 40);
+      if (t >= 40) {
+        app.ticker.remove(fx);
+        if (flash.parent) dialogContainer.removeChild(flash);
+        if (floatTxt.parent) app.stage.removeChild(floatTxt);
+      }
+    };
+    app.ticker.add(fx);
+  }
+
   function confirmSelection() {
     if (!dialogOpen) return;
     const decision = selectedOption === 0 ? 'yes' : 'no';
     if (selectedOption === 0) {
       yesCount++;
       yesText.text = `Yes: ${yesCount}`;
+      playAcceptSound();
+      spawnAcceptEffect();
     } else {
       noCount++;
       noText.text = `No: ${noCount}`;

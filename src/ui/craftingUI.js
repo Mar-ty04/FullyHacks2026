@@ -1,4 +1,5 @@
 import { Container, Graphics, Text, Sprite, Texture, Rectangle, Assets } from 'pixi.js';
+import { sfx } from '../audio.js';
 import { INGREDIENTS, RECIPES } from '../data/recipes.js';
 
 // ── Layout ───────────────────────────────────────────────────────────────────
@@ -132,7 +133,7 @@ export async function createCraftingUI(app, onClose, onDrinkCrafted, getBalance,
   xBtn.cursor = 'pointer';
   xBtn.on('pointerover', () => { xBtn.tint = 0xffaaaa; });
   xBtn.on('pointerout',  () => { xBtn.tint = 0xffffff; });
-  xBtn.on('pointerdown', () => { close(); if (onClose) onClose(); });
+  xBtn.on('pointerdown', () => { playCloseSound(); close(); if (onClose) onClose(); });
   panel.addChild(xBtn);
   const xTxt = new Text({ text: '✕', style: { fontSize: 14, fill: 0xffffff, fontWeight: 'bold' } });
   xTxt.anchor.set(0.5); xTxt.x = 22; xTxt.y = 22;
@@ -493,8 +494,27 @@ export async function createCraftingUI(app, onClose, onDrinkCrafted, getBalance,
     panel.removeChild(dragGhost); dragGhost.destroy(); dragGhost = null; dragIng = null;
   });
 
+  // ── Close sound ───────────────────────────────────────────────────────────
+  function playCloseSound() {
+    if (!sfx.enabled) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(220, now + 0.15);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      osc.start(now); osc.stop(now + 0.18);
+    } catch (_) {}
+  }
+
   // ── Success sound ─────────────────────────────────────────────────────────
   function playSuccessSound() {
+    if (!sfx.enabled) return;
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const master = ctx.createGain();
