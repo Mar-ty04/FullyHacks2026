@@ -11,6 +11,18 @@ export const INGREDIENTS = [
   { id: 'choc',        name: 'Chocolate',    color: 0x4a2010, cost: 5 },
 ];
 
+export const PASTRIES = [
+  // Donuts
+  { id: 'pink_donut',        name: 'Pink Donut',        cost: 3, sprite: '/sprites/pastry/pink donut.png' },
+  { id: 'chocolate_donut',   name: 'Chocolate Donut',   cost: 4, sprite: '/sprites/pastry/chocolate donut.png' },
+  // Cakes
+  { id: 'matcha_cake',       name: 'Matcha Cake',       cost: 5, sprite: '/sprites/pastry/matcha cake.png' },
+  // Croissants
+  { id: 'croissant',         name: 'Croissant',         cost: 4, sprite: '/sprites/pastry/crossiant.png' },
+  { id: 'strawberry_croissant', name: 'Strawberry Croissant', cost: 5, sprite: '/sprites/pastry/strawberry crossaint.png' },
+  { id: 'matcha_croissant',  name: 'Matcha Croissant',  cost: 5, sprite: '/sprites/pastry/matcha crossain.png' },
+];
+
 // Slot order matters: [slot1, slot2, slot3], null = empty slot
 export const RECIPES = [
   // ── Light Roast ──

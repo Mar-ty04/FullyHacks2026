@@ -8,6 +8,7 @@ import { createPlayer } from './player.js';
 import { createNPC } from './npc.js';
 import { createOrderSystem, getRandomOrder } from './orderSystem.js';
 import { createCraftingUI } from './ui/craftingUI.js';
+import { createPastryUI } from './ui/pastryUI.js';
 import { createToolbar } from './ui/toolbar.js';
 
 const app = new Application();
@@ -362,6 +363,15 @@ async function init() {
   );
   app.stage.addChild(craftingUI.container);
 
+  const pastryUI = await createPastryUI(
+    app,
+    () => { gamePaused = false; },
+    (name, tex) => { toolbar.addDrink(name, tex); },
+    () => orderSystem.getBalance(),
+    (amt) => orderSystem.spendMoney(amt),
+  );
+  app.stage.addChild(pastryUI.container);
+
   // Espresso machine interaction
   const ESPRESSO_CX = 322;
   const ESPRESSO_CY = 195;
@@ -380,6 +390,25 @@ async function init() {
   pressEHint.y = 65;
   pressEHint.visible = false;
   app.stage.addChild(pressEHint);
+
+  // Stove interaction (pastry selection)
+  const STOVE_CX = map.stoveBounds.cx;
+  const STOVE_CY = map.stoveBounds.cy;
+  const STOVE_R  = 40;
+  let nearStove = false;
+
+  const stoveHint = new Text({
+    text: '[ E ] Pastry',
+    style: {
+      fontFamily: '"Press Start 2P"', fontSize: 8, fill: 0xffffff,
+      dropShadow: { color: 0x000000, blur: 0, distance: 1 }
+    },
+  });
+  stoveHint.anchor.set(0.5, 1);
+  stoveHint.x = STOVE_CX;
+  stoveHint.y = 90;
+  stoveHint.visible = false;
+  app.stage.addChild(stoveHint);
 
   // Sink interaction (empties toolbar)
   const SINK_CX = 538;
@@ -451,6 +480,9 @@ async function init() {
       } else if (nearEspresso && !gamePaused) {
         gamePaused = true;
         craftingUI.open();
+      } else if (nearStove && !gamePaused) {
+        gamePaused = true;
+        pastryUI.open();
       } else if (nearSink && !gamePaused) {
         toolbar.clearAll();
       }
@@ -460,6 +492,7 @@ async function init() {
       } else if (gamePaused) {
         gamePaused = false;
         craftingUI.close();
+        pastryUI.close();
       }
     }
   });
@@ -479,6 +512,10 @@ async function init() {
     const dex = px - ESPRESSO_CX, dey = py - ESPRESSO_CY;
     nearEspresso = Math.sqrt(dex * dex + dey * dey) < ESPRESSO_R;
     pressEHint.visible = nearEspresso && !gamePaused;
+
+    const dtx = px - STOVE_CX, dty = py - STOVE_CY;
+    nearStove = Math.sqrt(dtx * dtx + dty * dty) < STOVE_R;
+    stoveHint.visible = nearStove && !gamePaused;
 
     const dsx = px - SINK_CX, dsy = py - SINK_CY;
     nearSink = Math.sqrt(dsx * dsx + dsy * dsy) < SINK_R;

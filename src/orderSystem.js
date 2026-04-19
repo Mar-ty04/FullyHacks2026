@@ -1,8 +1,12 @@
 import { Container, Graphics, Text, TextStyle, Sprite } from 'pixi.js';
 import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
-import { RECIPES } from './data/recipes.js';
+import { RECIPES, PASTRIES } from './data/recipes.js';
 
 export function getRandomOrder() {
+  // 25% chance of ordering a pastry instead of a drink
+  if (Math.random() < 0.25) {
+    return PASTRIES[Math.floor(Math.random() * PASTRIES.length)].name;
+  }
   const recipe = RECIPES[Math.floor(Math.random() * RECIPES.length)];
   return recipe.result.replace('\n', ' ');
 }
