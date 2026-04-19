@@ -45,12 +45,12 @@ export async function createStartPage(app) {
 
   const logo = new Sprite(logoTexture);
   logo.anchor.set(0.5);
-  logo.scale.set(2);
+  logo.scale.set(1.1);
   container.addChild(logo);
 
   const button = new Sprite(buttonTexture);
   button.anchor.set(0.5);
-  button.scale.set(0.65);
+  button.scale.set(0.45);
   button.interactive = true;
   button.cursor = 'pointer';
   container.addChild(button);
@@ -62,9 +62,9 @@ export async function createStartPage(app) {
     bg.width = w;
     bg.height = h;
     logo.x = w / 2;
-    logo.y = h * 0.15;
+    logo.y = h * 0.13;
     button.x = w / 2;
-    button.y = h * 0.90;
+    button.y = h * 0.91;
 
     for (const sw of swimmers) {
       sw.sprite.y = h * sw.yRatio;
@@ -80,7 +80,7 @@ export async function createStartPage(app) {
   let elapsed = 0;
   const ticker = (t) => {
     elapsed += t.deltaTime;
-    logo.y = app.screen.height * 0.15 + Math.sin(elapsed * 0.04) * 8;
+    logo.y = app.screen.height * 0.13 + Math.sin(elapsed * 0.04) * 8;
 
     for (const sw of swimmers) {
       sw.sprite.x += sw.speed;

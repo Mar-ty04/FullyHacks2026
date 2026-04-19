@@ -55,11 +55,11 @@ export async function createPlayerSelect(app) {
 
   const title = new Text({
     text: 'Choose Your Fish!',
-    style: { fontFamily: '"Press Start 2P"', fontSize: 36, fill: 0xffffff, dropShadow: { color: 0x000000, blur: 0, distance: 3 } },
+    style: { fontFamily: '"Press Start 2P"', fontSize: 26, fill: 0xffffff, dropShadow: { color: 0x000000, blur: 0, distance: 3 } },
   });
   title.anchor.set(0.5);
   title.x = w / 2;
-  title.y = h * 0.1;
+  title.y = h * 0.14;
   container.addChild(title);
 
   let selected = 0;
@@ -121,9 +121,9 @@ export async function createPlayerSelect(app) {
 
   const button = new Sprite(btnTexture);
   button.anchor.set(0.5);
-  button.scale.set(0.65);
+  button.scale.set(0.45);
   button.x = w / 2;
-  button.y = h * 0.9;
+  button.y = h * 0.91;
   button.interactive = true;
   button.cursor = 'pointer';
   container.addChild(button);
