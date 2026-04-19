@@ -349,6 +349,15 @@ export function createOrderSystem(app) {
     moneyText.text = `Money: $${moneyAmount}`;
   }
 
+  function getBalance() { return moneyAmount; }
+
+  function spendMoney(amount) {
+    if (moneyAmount < amount) return false;
+    moneyAmount -= amount;
+    moneyText.text = `Money: $${moneyAmount}`;
+    return true;
+  }
+
   function addSeatedCustomer(npc, name, order) {
     if (seatedCustomers.length === 0) emptyText.visible = false;
 
@@ -437,6 +446,8 @@ export function createOrderSystem(app) {
     addSeatedCustomer,
     removeSeatedCustomer,
     addMoney,
+    getBalance,
+    spendMoney,
     toggleOrdersPane,
     destroy,
   };

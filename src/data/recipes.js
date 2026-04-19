@@ -1,14 +1,14 @@
 export const INGREDIENTS = [
-  { id: 'beans_light', name: 'Light Beans',  color: 0xd4a574 },
-  { id: 'beans_med',   name: 'Med. Beans',   color: 0x8b5a2b },
-  { id: 'beans_dark',  name: 'Dark Beans',   color: 0x3d1c0a },
-  { id: 'milk',        name: 'Milk',         color: 0xffeedd },
-  { id: 'sugar',       name: 'Sugar',        color: 0xffee99 },
-  { id: 'water',       name: 'Water',        color: 0x88ccff },
-  { id: 'cream',       name: 'Cream',        color: 0xfffde7 },
-  { id: 'caramel',     name: 'Caramel',      color: 0xd4842a },
-  { id: 'ice',         name: 'Ice',          color: 0xb3ecff },
-  { id: 'choc',        name: 'Chocolate',    color: 0x4a2010 },
+  { id: 'beans_light', name: 'Light Beans',  color: 0xd4a574, cost: 3 },
+  { id: 'beans_med',   name: 'Med. Beans',   color: 0x8b5a2b, cost: 3 },
+  { id: 'beans_dark',  name: 'Dark Beans',   color: 0x3d1c0a, cost: 4 },
+  { id: 'milk',        name: 'Milk',         color: 0xffeedd, cost: 5 },
+  { id: 'sugar',       name: 'Sugar',        color: 0xffee99, cost: 2 },
+  { id: 'water',       name: 'Water',        color: 0x88ccff, cost: 1 },
+  { id: 'cream',       name: 'Cream',        color: 0xfffde7, cost: 6 },
+  { id: 'caramel',     name: 'Caramel',      color: 0xd4842a, cost: 5 },
+  { id: 'ice',         name: 'Ice',          color: 0xb3ecff, cost: 2 },
+  { id: 'choc',        name: 'Chocolate',    color: 0x4a2010, cost: 5 },
 ];
 
 // Slot order matters: [slot1, slot2, slot3], null = empty slot

@@ -267,6 +267,8 @@ async function init() {
     app,
     () => { gamePaused = false; },
     (name, tex) => { toolbar.addDrink(name, tex); },
+    () => orderSystem.getBalance(),
+    (amt) => orderSystem.spendMoney(amt),
   );
   app.stage.addChild(craftingUI.container);
 
