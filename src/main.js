@@ -327,7 +327,7 @@ async function init() {
         const servingEntry = nearNPC;
         toolbar.enterSelectMode((selected) => {
           // Compare drink name to NPC's order
-          console.log('Served:', selected.name, '| NPC wanted:', servingEntry.order, '| Match:', selected.name === servingEntry.order);
+          // console.log('Served:', selected.name, '| NPC wanted:', servingEntry.order, '| Match:', selected.name === servingEntry.order);
           if (selected.name === servingEntry.order) {
             // Correct drink — NPC enjoys for 5 sec then leaves
             servingEntry.npc.startEnjoying();

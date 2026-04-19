@@ -302,13 +302,14 @@ export async function createCafeMap(app) {
   };
 
   // Debug: draw collision boxes so we can see them
-  const debugGfx = new Graphics();
-  for (const c of colliders) {
-    debugGfx.rect(c.x, c.y, c.w, c.h);
-    debugGfx.stroke({ width: 1, color: 0xff0000 });
-    debugGfx.fill({ color: 0xff0000, alpha: 0.15 });
-  }
-  furniture.push(debugGfx);
+  // // Debug: draw collision boxes
+  // const debugGfx = new Graphics();
+  // for (const c of colliders) {
+  //   debugGfx.rect(c.x, c.y, c.w, c.h);
+  //   debugGfx.stroke({ width: 1, color: 0xff0000 });
+  //   debugGfx.fill({ color: 0xff0000, alpha: 0.15 });
+  // }
+  // furniture.push(debugGfx);
 
   // Overlay container — items that sit ON furniture, always rendered on top
   const overlayContainer = new Container();

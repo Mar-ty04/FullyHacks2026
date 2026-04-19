@@ -45,13 +45,13 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
   sprite.loop = true;
   sprite.play();
 
-  // Debug: green bounding box for interaction range (visible when seated)
+  // Interaction range for serving
   let INTERACT_W = 70;
   let INTERACT_H = 80;
   let INTERACT_Y_OFFSET = 0.5; // 0.5 = centered, 0.8 = extends upward
-  const debugBox = new Graphics();
-  debugBox.visible = false;
-  app.stage.addChild(debugBox);
+  // const debugBox = new Graphics();
+  // debugBox.visible = false;
+  // app.stage.addChild(debugBox);
 
   const pathY = (pathStartRow * TILE_SIZE) + (PATH_ROWS * TILE_SIZE / 2);
   const doorX = Math.floor(app.screen.width / 3);
@@ -127,7 +127,7 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
     enjoying = true;
     sittingIdle = false;
     enjoyTimer = 0;
-    debugBox.visible = false;
+    // debugBox.visible = false;
     sprite.eventMode = 'none';
     sprite.cursor = 'default';
   }
@@ -143,16 +143,16 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
   }
 
   function update() {
-    // Update debug box position
-    if (sittingIdle && !exited) {
-      debugBox.visible = true;
-      debugBox.clear();
-      debugBox.rect(sprite.x - INTERACT_W / 2, sprite.y - INTERACT_H * INTERACT_Y_OFFSET, INTERACT_W, INTERACT_H);
-      debugBox.stroke({ width: 2, color: 0x00ff00 });
-      debugBox.fill({ color: 0x00ff00, alpha: 0.1 });
-    } else {
-      debugBox.visible = false;
-    }
+    // // Debug: update bounding box position
+    // if (sittingIdle && !exited) {
+    //   debugBox.visible = true;
+    //   debugBox.clear();
+    //   debugBox.rect(sprite.x - INTERACT_W / 2, sprite.y - INTERACT_H * INTERACT_Y_OFFSET, INTERACT_W, INTERACT_H);
+    //   debugBox.stroke({ width: 2, color: 0x00ff00 });
+    //   debugBox.fill({ color: 0x00ff00, alpha: 0.1 });
+    // } else {
+    //   debugBox.visible = false;
+    // }
 
     if (exited) return;
     if (arrived) return;
@@ -219,8 +219,8 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
   }
 
   function cleanup() {
-    debugBox.visible = false;
-    if (debugBox.parent) debugBox.parent.removeChild(debugBox);
+    // debugBox.visible = false;
+    // if (debugBox.parent) debugBox.parent.removeChild(debugBox);
   }
 
   return {

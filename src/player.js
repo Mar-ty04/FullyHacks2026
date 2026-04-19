@@ -41,9 +41,9 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
   let moving = false;
   const SCALE = 1.2;
 
-  // Debug: green box showing player collision area
-  const debugBox = new Graphics();
-  app.stage.addChild(debugBox);
+  // // Debug: green box showing player collision area
+  // const debugBox = new Graphics();
+  // app.stage.addChild(debugBox);
 
   function update() {
     let dx = 0;
@@ -85,17 +85,6 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
       return false;
     }
 
-    // Debug: log every second
-    if (!window._debugTimer) window._debugTimer = 0;
-    window._debugTimer++;
-    if (window._debugTimer % 60 === 0) {
-      const left = sprite.x - playerW / 2;
-      const top = sprite.y + halfH - playerH;
-      console.log('Player feet box:', { left, top, w: playerW, h: playerH });
-      console.log('Colliders count:', colliders.length);
-      console.log('Currently colliding:', collidesAt(sprite.x, sprite.y));
-    }
-
     // Try moving on each axis independently
     if (!collidesAt(clampedX, sprite.y)) {
       sprite.x = clampedX;
@@ -103,14 +92,6 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
     if (!collidesAt(sprite.x, clampedY)) {
       sprite.y = clampedY;
     }
-
-    // Debug: draw player collision box in green
-    debugBox.clear();
-    const dLeft = sprite.x - playerW / 2;
-    const dTop = sprite.y - playerH / 2;
-    debugBox.rect(dLeft, dTop, playerW, playerH);
-    debugBox.stroke({ width: 2, color: 0x00ff00 });
-    debugBox.fill({ color: 0x00ff00, alpha: 0.2 });
 
     // Flip direction
     if (dx > 0) sprite.scale.x = SCALE;
