@@ -55,6 +55,8 @@ export async function createCafeMap(app) {
   // --- Furniture (depth-sorted with player) ---
   const furniture = [];
   const colliders = [];
+  // Chair center positions for NPC sit-down targets (4 stools + 6 booth chairs = 10 total)
+  const chairPositions = [];
 
   // Add furniture with full collision (player can't walk through at all)
   function addSolidFurniture(sprite, collisionPadding = 2) {
@@ -179,12 +181,14 @@ export async function createCafeMap(app) {
     leftStool.y = stoolCenterY;
     leftStool.scale.set(stoolScale);
     addFurniture(leftStool);
+    chairPositions.push({ x: leftStool.x + Math.round(stoolW / 2), y: stoolCenterY + Math.round(stoolH / 2) });
 
     const rightStool = new Sprite(stoolTex);
     rightStool.x = rtX + rtW + gap;
     rightStool.y = stoolCenterY;
     rightStool.scale.set(stoolScale);
     addFurniture(rightStool);
+    chairPositions.push({ x: rightStool.x + Math.round(stoolW / 2), y: stoolCenterY + Math.round(stoolH / 2) });
   }
 
   // Couch
@@ -254,6 +258,7 @@ export async function createCafeMap(app) {
   const tableScreenW = tableTex.width * tableScale;
   const chairScreenW = chairTex.width * chairScale;
   const chairY = 235 + Math.round(tableTex.height * tableScale) - 22;
+  const chairH = Math.round(chairTex.height * chairScale);
   for (let i = 0; i < 3; i++) {
     const tableX = 380 + i * tableSpacing;
 
@@ -268,12 +273,14 @@ export async function createCafeMap(app) {
     chair1.y = chairY;
     chair1.scale.set(chairScale);
     addFurniture(chair1);
+    chairPositions.push({ x: chair1.x + Math.round(chairScreenW / 2), y: chairY + Math.round(chairH / 2) });
 
     const chair2 = new Sprite(chairTex);
     chair2.x = tableX + Math.round(tableScreenW * 0.7 - chairScreenW / 2) + 8;
     chair2.y = chairY;
     chair2.scale.set(chairScale);
     addFurniture(chair2);
+    chairPositions.push({ x: chair2.x + Math.round(chairScreenW / 2), y: chairY + Math.round(chairH / 2) });
   }
 
   // Cash register (sits on counter — added to overlay, no depth sort)
@@ -310,5 +317,5 @@ export async function createCafeMap(app) {
   // Covers x=130..320, y=180..270 — where the barista naturally stands near the register.
   const counterInteractZone = { x: 130, y: 180, w: 190, h: 90 };
 
-  return { floorContainer, furniture, colliders, registerBounds, pathStartRow, overlayContainer, counterInteractZone };
+  return { floorContainer, furniture, colliders, registerBounds, pathStartRow, overlayContainer, counterInteractZone, chairPositions };
 }
