@@ -92,9 +92,11 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
     const exitX = direction === 'right'
       ? app.screen.width + FRAME_W * SCALE
       : -FRAME_W * SCALE;
+    // Walk to the door column first, then down to path, then off-screen
     activeWaypoints = [
-      { x: sprite.x, y: pathY },
-      { x: exitX, y: pathY },
+      { x: doorX, y: sprite.y },  // walk horizontally to door column
+      { x: doorX, y: pathY },     // walk down to path
+      { x: exitX, y: pathY },     // walk off-screen
     ];
     sprite.textures = walkFrames;
     sprite.play();
