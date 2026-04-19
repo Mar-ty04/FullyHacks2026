@@ -1,4 +1,4 @@
-import { Application, Assets, Sprite, AnimatedSprite, Texture, Container, Graphics, Rectangle } from 'pixi.js';
+import { Application, Assets, Sprite, AnimatedSprite, Texture, Container, Rectangle } from 'pixi.js';
 
 // --- Constants ---
 const GAME_WIDTH = 960;
@@ -23,23 +23,16 @@ async function init() {
   // --- Load textures ---
   const fishTexture = await Assets.load('/sprites/FishFight/player/PlayerFishy(96x80).png');
   const floorTexture = await Assets.load('/sprites/Cafe/Floors&Walls/floor48x48.png');
-  const bgTexture = await Assets.load('/sprites/FishFight/tiles/BG.png');
-
-  // --- Background layer (underwater) ---
-  const bgSprite = new Sprite(bgTexture);
-  bgSprite.width = app.screen.width;
-  bgSprite.height = app.screen.height;
-  app.stage.addChild(bgSprite);
 
   // --- Floor area (cafe floor) ---
-  // Extract one floor tile (the teal one at row 2, col 0 => x:0, y:96, 48x48)
-  const floorTileRect = new Texture({ source: floorTexture.source, frame: new Rectangle(0, 96, 48, 48) });
+  // Use the brown brick tile (row 0, col 0)
+  const floorTileRect = new Texture({ source: floorTexture.source, frame: new Rectangle(0, 0, 48, 48) });
 
-  const CAFE_X = 80;
-  const CAFE_Y = 80;
-  const CAFE_COLS = 16;
-  const CAFE_ROWS = 10;
   const TILE_SIZE = 48;
+  const CAFE_X = 0;
+  const CAFE_Y = 0;
+  const CAFE_COLS = Math.ceil(app.screen.width / TILE_SIZE);
+  const CAFE_ROWS = Math.ceil(app.screen.height / TILE_SIZE);
 
   const cafeContainer = new Container();
   app.stage.addChild(cafeContainer);
@@ -53,12 +46,6 @@ async function init() {
       cafeContainer.addChild(tile);
     }
   }
-
-  // Simple wall border
-  const walls = new Graphics();
-  walls.rect(CAFE_X - 4, CAFE_Y - 4, CAFE_COLS * TILE_SIZE + 8, CAFE_ROWS * TILE_SIZE + 8);
-  walls.stroke({ width: 4, color: 0x5c3a21 });
-  app.stage.addChild(walls);
 
   // --- Parse player sprite sheet ---
   // Row 0: idle/walk right (frames 0-10)
