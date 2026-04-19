@@ -103,6 +103,9 @@ async function init() {
     gameContainer.addChild(f);
   }
 
+  // Overlay — items on top of furniture (espresso, sink, register)
+  app.stage.addChildAt(map.overlayContainer, 2);
+
   // Load player with colliders
   const player = await createPlayer(app, selectedPath, map.colliders);
   gameContainer.addChild(player.sprite);

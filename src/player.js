@@ -26,9 +26,9 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
 
   const sprite = new AnimatedSprite(idleFrames);
   sprite.anchor.set(0.5, 0.5);
-  // Spawn behind the counter area (left side, between wall and counter)
-  sprite.x = 160;
-  sprite.y = 180;
+  // Spawn behind the counter area
+  sprite.x = 250;
+  sprite.y = 220;
   sprite.scale.set(1.2);
   sprite.animationSpeed = 0.15;
   sprite.play();
@@ -75,7 +75,7 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
 
     function collidesAt(px, py) {
       const left = px - playerW / 2;
-      const top = py + halfH - playerH;
+      const top = py - playerH / 2;
       for (let i = 0; i < colliders.length; i++) {
         const c = colliders[i];
         if (left < c.x + c.w && left + playerW > c.x && top < c.y + c.h && top + playerH > c.y) {
@@ -107,7 +107,7 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
     // Debug: draw player collision box in green
     debugBox.clear();
     const dLeft = sprite.x - playerW / 2;
-    const dTop = sprite.y + halfH - playerH;
+    const dTop = sprite.y - playerH / 2;
     debugBox.rect(dLeft, dTop, playerW, playerH);
     debugBox.stroke({ width: 2, color: 0x00ff00 });
     debugBox.fill({ color: 0x00ff00, alpha: 0.2 });
