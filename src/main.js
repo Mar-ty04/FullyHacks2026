@@ -142,8 +142,7 @@ async function init() {
 
   async function spawnQueueNPC() {
     if (spawnInProgress) return;
-    if (customerQueue.length >= 3) return;
-    if (occupiedChairs.size >= map.chairPositions.length) return;
+    if (customerQueue.length >= 5) return;
 
     spawnInProgress = true;
     customerCounter++;
@@ -270,7 +269,7 @@ async function init() {
     if (spawnTimer >= nextSpawnTime && !spawnInProgress) {
       spawnTimer = 0;
       nextSpawnTime = randomSpawnTime();
-      if (customerQueue.length < 3 && occupiedChairs.size < map.chairPositions.length) {
+      if (customerQueue.length < 5) {
         spawnQueueNPC().catch(console.error);
       }
     }
@@ -297,7 +296,7 @@ async function init() {
     // Trigger order dialog when front-of-queue NPC has arrived and player is at counter
     if (!dialogTriggered && customerQueue.length > 0) {
       const frontEntry = customerQueue[0];
-      if (frontEntry.npc.arrived() && playerNearCounter()) {
+      if (frontEntry.npc.arrived() && playerNearCounter() && occupiedChairs.size < map.chairPositions.length) {
         dialogTriggered = true;
         const order = getRandomOrder();
 
@@ -308,30 +307,24 @@ async function init() {
             orderSystem.addMoney(20);
 
             const chairIndex = getRandomFreeChair();
-            if (chairIndex !== -1) {
-              occupiedChairs.add(chairIndex);
-              const chairPos = map.chairPositions[chairIndex];
-              capturedEntry.npc.startSitting(chairPos);
-              seatedCustomers.push({ npc: capturedEntry.npc, name: capturedEntry.name, order, chairIndex });
-              orderSystem.addSeatedCustomer(capturedEntry.npc, capturedEntry.name, order);
+            occupiedChairs.add(chairIndex);
+            const chairPos = map.chairPositions[chairIndex];
+            capturedEntry.npc.startSitting(chairPos);
+            seatedCustomers.push({ npc: capturedEntry.npc, name: capturedEntry.name, order, chairIndex });
+            orderSystem.addSeatedCustomer(capturedEntry.npc, capturedEntry.name, order);
 
-              capturedEntry.npc.setOnClick(() => {
-                orderSystem.showSeatModal({ name: capturedEntry.name, order }, () => {
-                  const scIdx = seatedCustomers.findIndex(sc => sc.npc === capturedEntry.npc);
-                  if (scIdx !== -1) {
-                    occupiedChairs.delete(seatedCustomers[scIdx].chairIndex);
-                    seatedCustomers.splice(scIdx, 1);
-                  }
-                  orderSystem.removeSeatedCustomer(capturedEntry.npc);
-                  capturedEntry.npc.startExit();
-                  exitingNPCs.push(capturedEntry.npc);
-                });
+            capturedEntry.npc.setOnClick(() => {
+              orderSystem.showSeatModal({ name: capturedEntry.name, order }, () => {
+                const scIdx = seatedCustomers.findIndex(sc => sc.npc === capturedEntry.npc);
+                if (scIdx !== -1) {
+                  occupiedChairs.delete(seatedCustomers[scIdx].chairIndex);
+                  seatedCustomers.splice(scIdx, 1);
+                }
+                orderSystem.removeSeatedCustomer(capturedEntry.npc);
+                capturedEntry.npc.startExit();
+                exitingNPCs.push(capturedEntry.npc);
               });
-            } else {
-              // Cafe full — exit left
-              capturedEntry.npc.startExit('left');
-              exitingNPCs.push(capturedEntry.npc);
-            }
+            });
           } else {
             // Order declined — exit right
             capturedEntry.npc.startExit('right');
@@ -354,11 +347,7 @@ async function init() {
 
     // Depth sort by Y position
     for (const child of gameContainer.children) {
-      if (child.anchor && child.anchor.y > 0) {
-        child.zIndex = child.y;
-      } else {
-        child.zIndex = child.y + child.height;
-      }
+      child.zIndex = child.y;
     }
 
     // Seated NPCs must render above their stool
