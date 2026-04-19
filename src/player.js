@@ -70,8 +70,8 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
     const clampedY = Math.max(halfH, Math.min(cafeBottom - halfH, newY));
 
     // Player collision box
-    const playerW = 50;
-    const playerH = 40;
+    const playerW = 40;
+    const playerH = 38;
 
     function collidesAt(px, py) {
       const left = px - playerW / 2;

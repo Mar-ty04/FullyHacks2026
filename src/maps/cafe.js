@@ -134,7 +134,7 @@ export async function createCafeMap(app) {
   cafeWindow.x = topCounter3x + Math.round(counter204Tex.width * 0.5) + Math.round(fridgeTex.width * 0.20) + 70;
   cafeWindow.y = 60;
   cafeWindow.scale.set(0.18);
-  furniture.push(cafeWindow);
+  floorContainer.addChild(cafeWindow);
 
   // Banner (wall decoration, no collision)
   const bannerTex = await Assets.load('/sprites/Cafe/Sprite/38.png');
@@ -142,7 +142,7 @@ export async function createCafeMap(app) {
   banner.x = topCounter3x + Math.round(counter204Tex.width * 0.5);
   banner.y = 185;
   banner.scale.set(0.35);
-  furniture.push(banner);
+  floorContainer.addChild(banner);
 
   // Round tables
   const roundTableTex = await Assets.load('/sprites/Cafe/Sprite/326.png');
@@ -191,22 +191,32 @@ export async function createCafeMap(app) {
   couch.x = firstRtRightEdge + 110;
   couch.y = 370;
   couch.scale.set(0.35);
-  addFurniture(couch);
+  furniture.push(couch);
+  // Small collider — just the seat area (bottom 30%)
+  const couchW = couchTex.width * 0.35;
+  const couchH = couchTex.height * 0.35;
+  colliders.push({ x: couch.x, y: couch.y + couchH * 0.35, w: couchW, h: couchH * 0.3 });
 
-  // Coffee table
+  // Coffee table (flat on floor — player walks over it, but has collision)
   const coffeeTable = new Sprite(coffeeTableTex);
   coffeeTable.x = couch.x - 24;
   coffeeTable.y = couch.y + Math.round(couchTex.height * 0.35) - 10;
   coffeeTable.scale.set(0.35);
-  addFurniture(coffeeTable);
+  floorContainer.addChild(coffeeTable);
+  const ctW = coffeeTableTex.width * 0.35;
+  const ctH = coffeeTableTex.height * 0.35;
+  colliders.push({ x: coffeeTable.x, y: coffeeTable.y + ctH * 0.5, w: ctW, h: ctH * 0.5 });
 
-  // Display
+  // Display (flat on floor — player walks over it, but has collision)
   const displayTex = await Assets.load('/sprites/Cafe/Sprite/14.png');
   const display = new Sprite(displayTex);
   display.x = couch.x + 8;
   display.y = couch.y + Math.round(couchTex.height * 0.35) + 30;
   display.scale.set(0.35);
-  addFurniture(display);
+  floorContainer.addChild(display);
+  const dispW = displayTex.width * 0.35;
+  const dispH = displayTex.height * 0.35;
+  colliders.push({ x: display.x, y: display.y + dispH * 0.5, w: dispW, h: dispH * 0.5 });
 
   // Espresso machine (sits on counter — added to overlay, no depth sort)
   const espressoTex = await Assets.load('/sprites/Cafe/Sprite/233.png');
