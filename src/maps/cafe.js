@@ -95,7 +95,11 @@ export async function createCafeMap(app) {
   topCounter2.x = 91 + Math.round(counter204Tex.width * 0.5);
   topCounter2.y = 98;
   topCounter2.scale.set(0.5);
-  addSolidFurniture(topCounter2);
+  // Shorter collision so player can get close to espresso machine
+  floorContainer.addChild(topCounter2);
+  const tc2W = counter204Tex.width * 0.5;
+  const tc2H = counter204Tex.height * 0.5;
+  colliders.push({ x: topCounter2.x - 2, y: topCounter2.y - 2, w: tc2W + 4, h: tc2H * 0.7 });
 
   // Stove
   const stoveTex = await Assets.load('/sprites/Cafe/Sprite/226.png');
