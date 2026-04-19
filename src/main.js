@@ -7,6 +7,7 @@ import { createCafeMap } from './maps/cafe.js';
 import { createPlayer } from './player.js';
 import { createNPC } from './npc.js';
 import { createCraftingUI } from './ui/craftingUI.js';
+import { createToolbar } from './ui/toolbar.js';
 
 const app = new Application();
 
@@ -117,33 +118,64 @@ async function init() {
 
   await transition.fadeOut();
 
+  // Toolbar HUD — always visible at bottom, slides up on hover
+  const toolbar = createToolbar(app);
+  app.stage.addChild(toolbar.container);
+
   // Crafting UI — sits above everything
   let gamePaused = false;
-  const craftingUI = await createCraftingUI(app, () => { gamePaused = false; });
+  const craftingUI = await createCraftingUI(
+    app,
+    () => { gamePaused = false; },
+    (name, tex) => { toolbar.addDrink(name, tex); },
+  );
   app.stage.addChild(craftingUI.container);
 
-  // "Press E" hint above the espresso machine
+  // ── Espresso machine interaction ─────────────────────────────────────────
+  const ESPRESSO_CX = 322;
+  const ESPRESSO_CY = 195;
+  const ESPRESSO_R  = 15;
+  let nearEspresso = false;
+
   const pressEHint = new Text({
     text: '[ E ] Craft',
     style: { fontFamily: '"Press Start 2P"', fontSize: 8, fill: 0xffffff,
              dropShadow: { color: 0x000000, blur: 0, distance: 1 } },
   });
   pressEHint.anchor.set(0.5, 1);
-  pressEHint.x = 322;
-  pressEHint.y = 168;
+  pressEHint.x = ESPRESSO_CX;
+  pressEHint.y = 65;
   pressEHint.visible = false;
   app.stage.addChild(pressEHint);
 
-  // Espresso interaction zone (player stands in front of counter)
-  const ESPRESSO_CX = 322;
-  const ESPRESSO_CY = 195;
-  const INTERACT_R  = 25;
-  let nearEspresso = false;
+  // ── Sink interaction (empties toolbar) ───────────────────────────────────
+  // Sink position derived from cafe.js sprite layout:
+  // topCounter3x = 91 + round(308*0.5)*2 + round(124*0.5) = 461
+  // sink.x = 461 + round((308-117)*0.25) = 509, displayed width = 58px
+  const SINK_CX = 538;
+  const SINK_CY = 195;
+  const SINK_R  = 15;
+  let nearSink = false;
+
+  const sinkHint = new Text({
+    text: '[ E ] Empty',
+    style: { fontFamily: '"Press Start 2P"', fontSize: 8, fill: 0xffffff,
+             dropShadow: { color: 0x000000, blur: 0, distance: 1 } },
+  });
+  sinkHint.anchor.set(0.5, 1);
+  sinkHint.x = SINK_CX;
+  sinkHint.y = 65;
+  sinkHint.visible = false;
+  app.stage.addChild(sinkHint);
 
   window.addEventListener('keydown', (e) => {
-    if ((e.key === 'e' || e.key === 'E') && nearEspresso && !gamePaused) {
-      gamePaused = true;
-      craftingUI.open();
+    if (e.key === 'e' || e.key === 'E') {
+      if (nearEspresso && !gamePaused) {
+        gamePaused = true;
+        craftingUI.open();
+      } else if (nearSink && !gamePaused) {
+        toolbar.clearAll();
+      }
     } else if (e.key === 'Escape' && gamePaused) {
       gamePaused = false;
       craftingUI.close();
@@ -155,11 +187,17 @@ async function init() {
     if (!gamePaused) player.update();
     npc.update();
 
-    // Proximity check for espresso machine
-    const dx = player.sprite.x - ESPRESSO_CX;
-    const dy = player.sprite.y - ESPRESSO_CY;
-    nearEspresso = Math.sqrt(dx * dx + dy * dy) < INTERACT_R;
+    const px = player.sprite.x;
+    const py = player.sprite.y;
+
+    // Proximity checks
+    const dex = px - ESPRESSO_CX, dey = py - ESPRESSO_CY;
+    nearEspresso = Math.sqrt(dex * dex + dey * dey) < ESPRESSO_R;
     pressEHint.visible = nearEspresso && !gamePaused;
+
+    const dsx = px - SINK_CX, dsy = py - SINK_CY;
+    nearSink = Math.sqrt(dsx * dsx + dsy * dsy) < SINK_R;
+    sinkHint.visible = nearSink && !gamePaused;
 
     // Depth sort using zIndex
     for (const child of gameContainer.children) {
