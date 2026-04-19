@@ -10,6 +10,7 @@ import { createOrderSystem, getRandomOrder } from './orderSystem.js';
 import { createCraftingUI } from './ui/craftingUI.js';
 import { createPastryUI } from './ui/pastryUI.js';
 import { createToolbar } from './ui/toolbar.js';
+import { createSettingsUI } from './ui/settingsUI.js';
 
 const app = new Application();
 
@@ -348,6 +349,10 @@ async function init() {
   });
 
   await transition.fadeOut();
+
+  // ── Settings UI ─────────────────────────────────────────────────────────
+  const settingsUI = createSettingsUI(app);
+  app.stage.addChild(settingsUI.container);
 
   // ── Crafting system (Vien) ──────────────────────────────────────────────
   const toolbar = createToolbar(app);
