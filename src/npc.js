@@ -1,4 +1,4 @@
-import { Assets, AnimatedSprite, Texture, Rectangle } from 'pixi.js';
+import { Assets, AnimatedSprite, Texture, Rectangle, Graphics } from 'pixi.js';
 import { FRAME_W, FRAME_H, TILE_SIZE, PATH_ROWS } from './constants.js';
 
 const NPC_SPEED = 1.5;
@@ -44,6 +44,14 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
   sprite.animationSpeed = 0.15;
   sprite.loop = true;
   sprite.play();
+
+  // Debug: green bounding box for interaction range (visible when seated)
+  let INTERACT_W = 60;
+  let INTERACT_H = 50;
+  let INTERACT_Y_OFFSET = 0.5; // 0.5 = centered, 0.8 = extends upward
+  const debugBox = new Graphics();
+  debugBox.visible = false;
+  app.stage.addChild(debugBox);
 
   const pathY = (pathStartRow * TILE_SIZE) + (PATH_ROWS * TILE_SIZE / 2);
   const doorX = Math.floor(app.screen.width / 3);
@@ -98,6 +106,15 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
     activeWaypoints = [{ x: chairPos.x, y: chairPos.y }];
     sprite.textures = walkFrames;
     sprite.play();
+
+    // Set interaction box based on chair type
+    if (chairPos.type === 'counter') {
+      INTERACT_H = 120;
+      INTERACT_Y_OFFSET = 0.8; // extends upward toward counter
+    } else {
+      INTERACT_H = 50;
+      INTERACT_Y_OFFSET = 0.5; // centered
+    }
   }
 
   // Registers a callback fired when the NPC sprite is clicked while sitting idle
@@ -111,6 +128,17 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
   }
 
   function update() {
+    // Update debug box position
+    if (sittingIdle && !exited) {
+      debugBox.visible = true;
+      debugBox.clear();
+      debugBox.rect(sprite.x - INTERACT_W / 2, sprite.y - INTERACT_H * INTERACT_Y_OFFSET, INTERACT_W, INTERACT_H);
+      debugBox.stroke({ width: 2, color: 0x00ff00 });
+      debugBox.fill({ color: 0x00ff00, alpha: 0.1 });
+    } else {
+      debugBox.visible = false;
+    }
+
     if (exited) return;
     if (arrived) return;
     if (sittingIdle) return;
@@ -158,6 +186,18 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
     }
   }
 
+  function isPlayerInRange(px, py) {
+    if (!sittingIdle || exited) return false;
+    const boxTop = sprite.y - INTERACT_H * INTERACT_Y_OFFSET;
+    return px >= sprite.x - INTERACT_W / 2 && px <= sprite.x + INTERACT_W / 2 &&
+           py >= boxTop && py <= boxTop + INTERACT_H;
+  }
+
+  function cleanup() {
+    debugBox.visible = false;
+    if (debugBox.parent) debugBox.parent.removeChild(debugBox);
+  }
+
   return {
     sprite,
     update,
@@ -169,5 +209,7 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
     isSittingIdle: () => sittingIdle,
     setOnClick,
     getThumbnailTexture,
+    isPlayerInRange,
+    cleanup,
   };
 }

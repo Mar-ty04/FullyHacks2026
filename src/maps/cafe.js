@@ -185,14 +185,14 @@ export async function createCafeMap(app) {
     leftStool.y = stoolCenterY;
     leftStool.scale.set(stoolScale);
     addFurniture(leftStool);
-    chairPositions.push({ x: leftStool.x + Math.round(stoolW / 2), y: stoolCenterY + Math.round(stoolH / 2) });
+    chairPositions.push({ x: leftStool.x + Math.round(stoolW / 2), y: stoolCenterY + Math.round(stoolH / 2), type: 'table' });
 
     const rightStool = new Sprite(stoolTex);
     rightStool.x = rtX + rtW + gap;
     rightStool.y = stoolCenterY;
     rightStool.scale.set(stoolScale);
     addFurniture(rightStool);
-    chairPositions.push({ x: rightStool.x + Math.round(stoolW / 2), y: stoolCenterY + Math.round(stoolH / 2) });
+    chairPositions.push({ x: rightStool.x + Math.round(stoolW / 2), y: stoolCenterY + Math.round(stoolH / 2), type: 'table' });
   }
 
   // Couch
@@ -277,14 +277,14 @@ export async function createCafeMap(app) {
     chair1.y = chairY;
     chair1.scale.set(chairScale);
     addFurniture(chair1);
-    chairPositions.push({ x: chair1.x + Math.round(chairScreenW / 2), y: chairY + Math.round(chairH / 2) });
+    chairPositions.push({ x: chair1.x + Math.round(chairScreenW / 2), y: chairY + Math.round(chairH / 2), type: 'counter' });
 
     const chair2 = new Sprite(chairTex);
     chair2.x = tableX + Math.round(tableScreenW * 0.7 - chairScreenW / 2) + 8;
     chair2.y = chairY;
     chair2.scale.set(chairScale);
     addFurniture(chair2);
-    chairPositions.push({ x: chair2.x + Math.round(chairScreenW / 2), y: chairY + Math.round(chairH / 2) });
+    chairPositions.push({ x: chair2.x + Math.round(chairScreenW / 2), y: chairY + Math.round(chairH / 2), type: 'counter' });
   }
 
   // Cash register (sits on counter — added to overlay, no depth sort)
