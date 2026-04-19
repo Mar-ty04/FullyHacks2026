@@ -1,5 +1,6 @@
 import { Application } from 'pixi.js';
 import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
+import { createStartPage } from './startpage.js';
 import { createCafeMap } from './maps/cafe.js';
 import { createPlayer } from './player.js';
 
@@ -13,6 +14,12 @@ async function init() {
     resizeTo: window,
   });
   document.body.appendChild(app.canvas);
+
+  // Start screen
+  const startPage = await createStartPage(app);
+  app.stage.addChild(startPage.container);
+  await startPage.waitForStart();
+  app.stage.removeChild(startPage.container);
 
   // Load map
   const map = await createCafeMap(app);
