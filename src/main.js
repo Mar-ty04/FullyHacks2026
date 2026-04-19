@@ -5,6 +5,7 @@ import { createPlayerSelect } from './playerselect.js';
 import { createTransition } from './transition.js';
 import { createCafeMap } from './maps/cafe.js';
 import { createPlayer } from './player.js';
+import { createNPC } from './npc.js';
 
 const app = new Application();
 
@@ -47,9 +48,14 @@ async function init() {
   app.stage.addChildAt(player.sprite, 1);
   await transition.fadeOut();
 
+  // Spawn an NPC
+  const npc = await createNPC(app, map.registerBounds, map.pathStartRow);
+  app.stage.addChildAt(npc.sprite, 1);
+
   // Game loop
   app.ticker.add(() => {
     player.update();
+    npc.update();
   });
 }
 

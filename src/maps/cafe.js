@@ -32,5 +32,22 @@ export async function createCafeMap(app) {
   boundary.stroke({ width: 3, color: 0x5c3a21 });
   container.addChild(boundary);
 
-  return { container };
+  // Cash register — placed toward the right side of the cafe
+  const registerTexture = await Assets.load('/sprites/Cafe/Sprite/158.png');
+  const register = new Sprite(registerTexture);
+  register.anchor.set(0.5, 0.5);
+  register.x = Math.floor(totalCols * TILE_SIZE * 0.7);
+  register.y = Math.floor(pathStartRow * TILE_SIZE * 0.35);
+  register.scale.set(0.8);
+  container.addChild(register);
+
+  // Register position and collision bounds for other systems
+  const registerBounds = {
+    x: register.x,
+    y: register.y,
+    width: registerTexture.width * register.scale.x,
+    height: registerTexture.height * register.scale.y,
+  };
+
+  return { container, registerBounds, pathStartRow };
 }
