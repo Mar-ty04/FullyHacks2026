@@ -12,8 +12,8 @@ function getFrames(source, row, startCol, count) {
   return frames;
 }
 
-export async function createPlayer(app) {
-  const fishTexture = await Assets.load('/sprites/FishFight/player/PlayerFishy(96x80).png');
+export async function createPlayer(app, spritePath = '/sprites/FishFight/player/PlayerFishy(96x80).png') {
+  const fishTexture = await Assets.load(spritePath);
   const source = fishTexture.source;
 
   // Row 1 is the walk cycle (6 frames) — use for both directions, flip for right
