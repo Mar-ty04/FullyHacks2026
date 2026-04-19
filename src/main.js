@@ -10,6 +10,9 @@ import { createNPC } from './npc.js';
 const app = new Application();
 
 async function init() {
+  // Load pixel font before anything renders
+  await document.fonts.load('16px "Press Start 2P"');
+
   await app.init({
     width: GAME_WIDTH,
     height: GAME_HEIGHT,

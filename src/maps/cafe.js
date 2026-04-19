@@ -195,7 +195,7 @@ export async function createCafeMap(app) {
   couch.x = firstRtRightEdge + 110;
   couch.y = 370;
   couch.scale.set(0.35);
-  furniture.push(couch);
+  floorContainer.addChild(couch);
   // Small collider — just the seat area (bottom 30%)
   const couchW = couchTex.width * 0.35;
   const couchH = couchTex.height * 0.35;
