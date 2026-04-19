@@ -506,7 +506,8 @@ async function init() {
           // Compare drink name to NPC's order
           // console.log('Served:', selected.name, '| NPC wanted:', servingEntry.order, '| Match:', selected.name === servingEntry.order);
           if (selected.name === servingEntry.order) {
-            // Correct drink — NPC enjoys for 5 sec then leaves
+            // Correct drink — NPC enjoys for 5 sec then leaves, player earns $10
+            orderSystem.addMoney(10);
             servingEntry.npc.startEnjoying();
             orderSystem.removeSeatedCustomer(servingEntry.npc);
             // After enjoying, NPC exits (handled in npc.js update)
