@@ -69,7 +69,7 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
   let clickCallback = null;
 
   // Walks NPC from its current position down to the path, then off-screen left
-  function startExit() {
+  function startExit(direction = 'left') {
     if (exiting || exited) return;
     exiting = true;
     arrived = false;
@@ -78,9 +78,12 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
     waypointIndex = 0;
     sprite.eventMode = 'none';
     sprite.cursor = 'default';
+    const exitX = direction === 'right'
+      ? app.screen.width + FRAME_W * SCALE
+      : -FRAME_W * SCALE;
     activeWaypoints = [
       { x: sprite.x, y: pathY },
-      { x: -FRAME_W * SCALE, y: pathY },
+      { x: exitX, y: pathY },
     ];
     sprite.textures = walkFrames;
     sprite.play();
