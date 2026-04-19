@@ -1,6 +1,7 @@
 import { Application } from 'pixi.js';
 import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
 import { createStartPage } from './startpage.js';
+import { createPlayerSelect } from './playerselect.js';
 import { createCafeMap } from './maps/cafe.js';
 import { createPlayer } from './player.js';
 
@@ -21,12 +22,18 @@ async function init() {
   await startPage.waitForStart();
   app.stage.removeChild(startPage.container);
 
+  // Player selection
+  const playerSelect = await createPlayerSelect(app);
+  app.stage.addChild(playerSelect.container);
+  const selectedPath = await playerSelect.waitForSelect();
+  app.stage.removeChild(playerSelect.container);
+
   // Load map
   const map = await createCafeMap(app);
   app.stage.addChild(map.container);
 
   // Load player
-  const player = await createPlayer(app);
+  const player = await createPlayer(app, selectedPath);
   app.stage.addChild(player.sprite);
 
   // Game loop
