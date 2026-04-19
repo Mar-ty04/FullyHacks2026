@@ -95,6 +95,7 @@ async function init() {
 
   // Game objects container — depth sorted by y each frame
   const gameContainer = new Container();
+  gameContainer.sortableChildren = true;
   app.stage.addChildAt(gameContainer, 1);
 
   // Add furniture to game container
@@ -117,12 +118,17 @@ async function init() {
     player.update();
     npc.update();
 
-    // Depth sort — objects with higher y (lower on screen) render on top
-    gameContainer.children.sort((a, b) => {
-      const aBottom = a.y + (a.height * (1 - a.anchor?.y ?? 0));
-      const bBottom = b.y + (b.height * (1 - b.anchor?.y ?? 0));
-      return aBottom - bBottom;
-    });
+    // Depth sort using zIndex
+    for (const child of gameContainer.children) {
+      if (child.anchor && child.anchor.y > 0) {
+        // Player/NPC: sort by y (center of sprite)
+        child.zIndex = child.y;
+      } else {
+        // Furniture: sort by bottom edge
+        child.zIndex = child.y + child.height;
+      }
+    }
+    gameContainer.sortChildren();
   });
 }
 

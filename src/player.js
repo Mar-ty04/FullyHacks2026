@@ -1,4 +1,4 @@
-import { Assets, AnimatedSprite, Texture, Rectangle } from 'pixi.js';
+import { Assets, AnimatedSprite, Texture, Rectangle, Graphics } from 'pixi.js';
 import { FRAME_W, FRAME_H, PLAYER_SPEED, TILE_SIZE, PATH_ROWS } from './constants.js';
 
 function getFrames(source, row, startCol, count) {
@@ -26,9 +26,9 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
 
   const sprite = new AnimatedSprite(idleFrames);
   sprite.anchor.set(0.5, 0.5);
-  // Spawn in the open area (right side, lower half of cafe)
-  sprite.x = totalCols * TILE_SIZE * 0.75;
-  sprite.y = (totalRows - PATH_ROWS) * TILE_SIZE * 0.7;
+  // Spawn behind the counter area (left side, between wall and counter)
+  sprite.x = 160;
+  sprite.y = 180;
   sprite.scale.set(1.2);
   sprite.animationSpeed = 0.15;
   sprite.play();
@@ -40,6 +40,10 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
 
   let moving = false;
   const SCALE = 1.2;
+
+  // Debug: green box showing player collision area
+  const debugBox = new Graphics();
+  app.stage.addChild(debugBox);
 
   function update() {
     let dx = 0;
@@ -65,19 +69,31 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
     const clampedX = Math.max(halfW, Math.min(totalCols * TILE_SIZE - halfW, newX));
     const clampedY = Math.max(halfH, Math.min(cafeBottom - halfH, newY));
 
-    // Player collision box (smaller than sprite — use feet area)
-    const playerW = 30;
-    const playerH = 20;
+    // Player collision box
+    const playerW = 50;
+    const playerH = 40;
 
     function collidesAt(px, py) {
       const left = px - playerW / 2;
       const top = py + halfH - playerH;
-      for (const c of colliders) {
+      for (let i = 0; i < colliders.length; i++) {
+        const c = colliders[i];
         if (left < c.x + c.w && left + playerW > c.x && top < c.y + c.h && top + playerH > c.y) {
           return true;
         }
       }
       return false;
+    }
+
+    // Debug: log every second
+    if (!window._debugTimer) window._debugTimer = 0;
+    window._debugTimer++;
+    if (window._debugTimer % 60 === 0) {
+      const left = sprite.x - playerW / 2;
+      const top = sprite.y + halfH - playerH;
+      console.log('Player feet box:', { left, top, w: playerW, h: playerH });
+      console.log('Colliders count:', colliders.length);
+      console.log('Currently colliding:', collidesAt(sprite.x, sprite.y));
     }
 
     // Try moving on each axis independently
@@ -87,6 +103,14 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
     if (!collidesAt(sprite.x, clampedY)) {
       sprite.y = clampedY;
     }
+
+    // Debug: draw player collision box in green
+    debugBox.clear();
+    const dLeft = sprite.x - playerW / 2;
+    const dTop = sprite.y + halfH - playerH;
+    debugBox.rect(dLeft, dTop, playerW, playerH);
+    debugBox.stroke({ width: 2, color: 0x00ff00 });
+    debugBox.fill({ color: 0x00ff00, alpha: 0.2 });
 
     // Flip direction
     if (dx > 0) sprite.scale.x = SCALE;

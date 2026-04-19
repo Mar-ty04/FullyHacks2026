@@ -56,8 +56,8 @@ export async function createCafeMap(app) {
   const furniture = [];
   const colliders = [];
 
-  // Helper: create a furniture sprite and register its collision box
-  function addFurniture(sprite, collisionPadding = 4) {
+  // Add furniture with full collision (player can't walk through at all)
+  function addSolidFurniture(sprite, collisionPadding = 2) {
     furniture.push(sprite);
     const w = sprite.texture.width * sprite.scale.x;
     const h = sprite.texture.height * sprite.scale.y;
@@ -69,19 +69,33 @@ export async function createCafeMap(app) {
     });
   }
 
+  // Add furniture with partial collision (bottom 40% only — player can walk behind top)
+  function addFurniture(sprite, collisionPadding = 2) {
+    furniture.push(sprite);
+    const w = sprite.texture.width * sprite.scale.x;
+    const h = sprite.texture.height * sprite.scale.y;
+    const collisionTop = 0.6;
+    colliders.push({
+      x: sprite.x - collisionPadding,
+      y: sprite.y + h * collisionTop,
+      w: w + collisionPadding * 2,
+      h: h * (1 - collisionTop) + collisionPadding,
+    });
+  }
+
   // Top counters
   const counter204Tex = await Assets.load('/sprites/Cafe/Sprite/204.png');
   const topCounter1 = new Sprite(counter204Tex);
   topCounter1.x = 91;
   topCounter1.y = 98;
   topCounter1.scale.set(0.5);
-  addFurniture(topCounter1);
+  addSolidFurniture(topCounter1);
 
   const topCounter2 = new Sprite(counter204Tex);
   topCounter2.x = 91 + Math.round(counter204Tex.width * 0.5);
   topCounter2.y = 98;
   topCounter2.scale.set(0.5);
-  addFurniture(topCounter2);
+  addSolidFurniture(topCounter2);
 
   // Stove
   const stoveTex = await Assets.load('/sprites/Cafe/Sprite/226.png');
@@ -89,7 +103,7 @@ export async function createCafeMap(app) {
   stove.x = 91 + Math.round(counter204Tex.width * 0.5) * 2;
   stove.y = 98;
   stove.scale.set(0.5);
-  addFurniture(stove);
+  addSolidFurniture(stove);
 
   // Counter next to stove
   const sinkTex = await Assets.load('/sprites/Cafe/Sprite/152.png');
@@ -98,14 +112,14 @@ export async function createCafeMap(app) {
   topCounter3.x = topCounter3x;
   topCounter3.y = 98;
   topCounter3.scale.set(0.5);
-  addFurniture(topCounter3);
+  addSolidFurniture(topCounter3);
 
-  // Sink (on top of counter, no separate collision)
+  // Sink (on top of counter, solid collision)
   const sink = new Sprite(sinkTex);
   sink.x = topCounter3x + Math.round((counter204Tex.width - sinkTex.width) * 0.25);
   sink.y = 88;
   sink.scale.set(0.5);
-  furniture.push(sink);
+  addSolidFurniture(sink);
 
   // Fridge
   const fridgeTex = await Assets.load('/sprites/Cafe/Sprite/316.png');
@@ -113,7 +127,7 @@ export async function createCafeMap(app) {
   fridge.x = topCounter3x + Math.round(counter204Tex.width * 0.5);
   fridge.y = 55;
   fridge.scale.set(0.20);
-  addFurniture(fridge);
+  addSolidFurniture(fridge);
 
   // Window (wall decoration, no collision)
   const windowTex = await Assets.load('/sprites/Cafe/Sprite/315.png');
@@ -195,29 +209,29 @@ export async function createCafeMap(app) {
   display.scale.set(0.35);
   addFurniture(display);
 
-  // Espresso machine (sits on counter, no separate collision)
+  // Espresso machine (on counter, solid collision)
   const espressoTex = await Assets.load('/sprites/Cafe/Sprite/233.png');
   const espresso = new Sprite(espressoTex);
   espresso.x = 91 + Math.round(counter204Tex.width * 0.5) + Math.round((counter204Tex.width - espressoTex.width) * 0.5 * 0.5);
   espresso.y = 78;
   espresso.scale.set(0.5);
-  furniture.push(espresso);
+  addSolidFurniture(espresso);
 
-  // Side counter panel
+  // Side counter panel (no collision — player works behind here)
   const sideTex = await Assets.load('/sprites/Cafe/Sprite/210.png');
   const sideCounter = new Sprite(sideTex);
   sideCounter.x = 91;
   sideCounter.y = 136;
   sideCounter.scale.set(0.5);
-  addFurniture(sideCounter);
+  furniture.push(sideCounter);
 
-  // Counter top
+  // Counter top (no collision — player works behind here)
   const counterTex = await Assets.load('/sprites/Cafe/Sprite/215.png');
   const counter = new Sprite(counterTex);
   counter.x = 140;
   counter.y = 235;
   counter.scale.set(0.5);
-  addFurniture(counter);
+  furniture.push(counter);
 
   // Booth tables + chairs
   const tableTex = await Assets.load('/sprites/Cafe/Sprite/321.png');
@@ -250,13 +264,13 @@ export async function createCafeMap(app) {
     addFurniture(chair2);
   }
 
-  // Cash register
+  // Cash register (no collision — player works behind here)
   const registerTex = await Assets.load('/sprites/Cafe/Sprite/158.png');
   const register = new Sprite(registerTex);
   register.x = 185;
   register.y = 208;
   register.scale.set(0.38);
-  addFurniture(register);
+  furniture.push(register);
 
   const registerBounds = {
     x: register.x + (registerTex.width * register.scale.x) / 2,
@@ -264,6 +278,15 @@ export async function createCafeMap(app) {
     width: registerTex.width * register.scale.x,
     height: registerTex.height * register.scale.y,
   };
+
+  // Debug: draw collision boxes so we can see them
+  const debugGfx = new Graphics();
+  for (const c of colliders) {
+    debugGfx.rect(c.x, c.y, c.w, c.h);
+    debugGfx.stroke({ width: 1, color: 0xff0000 });
+    debugGfx.fill({ color: 0xff0000, alpha: 0.15 });
+  }
+  furniture.push(debugGfx);
 
   return { floorContainer, furniture, colliders, registerBounds, pathStartRow };
 }
