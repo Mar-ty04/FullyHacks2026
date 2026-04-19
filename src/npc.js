@@ -59,8 +59,8 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
   sprite.y = pathY;
 
   const stopX = registerBounds.x;
-  // Each queue member stops further below the register by QUEUE_OFFSET
-  const stopY = registerBounds.y + registerBounds.height / 2 + FRAME_H * SCALE / 2 + 10 + queueIndex * QUEUE_OFFSET;
+  // Each queue member stops further below the register by QUEUE_OFFSET; mutable so advanceQueue() can update it
+  let stopY = registerBounds.y + registerBounds.height / 2 + FRAME_H * SCALE / 2 + 10 + queueIndex * QUEUE_OFFSET;
 
   const entryWaypoints = [
     { x: stopX, y: pathY },   // walk along path to x below register
@@ -140,6 +140,24 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
   // Returns the first idle frame — used as a thumbnail in the orders pane
   function getThumbnailTexture() {
     return idleFrames[0];
+  }
+
+  // Moves this NPC one slot forward in the queue (called when the customer ahead leaves).
+  // If already standing idle, starts walking to the new position.
+  // If still en-route, updates the final waypoint so they head to the closer stop.
+  function advanceQueue() {
+    if (exiting || exited || sitting || sittingIdle) return;
+    stopY -= QUEUE_OFFSET;
+    if (arrived) {
+      arrived = false;
+      waypointIndex = 0;
+      activeWaypoints = [{ x: stopX, y: stopY }];
+      sprite.textures = walkFrames;
+      sprite.play();
+    } else {
+      // Still walking — patch the final waypoint in-place
+      activeWaypoints[activeWaypoints.length - 1] = { x: stopX, y: stopY };
+    }
   }
 
   function update() {
@@ -238,5 +256,6 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
     cleanup,
     startEnjoying,
     isEnjoying: () => enjoying,
+    advanceQueue,
   };
 }

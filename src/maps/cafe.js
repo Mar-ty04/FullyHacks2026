@@ -317,10 +317,14 @@ export async function createCafeMap(app) {
   overlayContainer.addChild(espresso);
   overlayContainer.addChild(register);
 
-  // Interaction zone: rectangular area on the staff side of the counter/register.
-  // The dialog triggers when the player's center is inside this rect AND the NPC has arrived.
-  // Covers x=130..320, y=180..270 — where the barista naturally stands near the register.
-  const counterInteractZone = { x: 130, y: 180, w: 190, h: 90 };
+  // Interaction zone: tight hitbox derived from the cash register sprite bounds.
+  // Dialog only triggers when the player is standing directly at the register.
+  const counterInteractZone = {
+    x: registerBounds.x - registerBounds.width / 2 - 8,
+    y: registerBounds.y - registerBounds.height / 2 - 8,
+    w: registerBounds.width + 16,
+    h: registerBounds.height + 30, // extra downward room so player can stand just in front
+  };
 
   return { floorContainer, furniture, colliders, registerBounds, pathStartRow, overlayContainer, counterInteractZone, chairPositions };
 }

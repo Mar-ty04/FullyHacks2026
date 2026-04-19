@@ -67,7 +67,11 @@ export async function createPlayer(app, spritePath = '/sprites/FishFight/player/
     const halfH = (FRAME_H * SCALE) / 2;
     const cafeBottom = (totalRows - PATH_ROWS) * TILE_SIZE;
     const clampedX = Math.max(halfW, Math.min(totalCols * TILE_SIZE - halfW, newX));
-    const clampedY = Math.max(halfH, Math.min(cafeBottom - halfH, newY));
+    // Prevent walking into the wall strip (top 140px). Allow ~30% of sprite height to
+    // overlap the wall-floor boundary for isometric depth accuracy.
+    const wallBottom = 140;
+    const minY = wallBottom + halfH * 0.4;
+    const clampedY = Math.max(minY, Math.min(cafeBottom - halfH, newY));
 
     // Player collision box
     const playerW = 40;

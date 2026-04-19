@@ -61,10 +61,10 @@ async function init() {
 
   function scaleToFit() {
     const vp = window.visualViewport;
-    const viewW = vp ? vp.width  : window.innerWidth;
+    const viewW = vp ? vp.width : window.innerWidth;
     const viewH = vp ? vp.height : window.innerHeight;
     const scale = Math.min(viewW / GAME_WIDTH, viewH / GAME_HEIGHT);
-    app.canvas.style.width  = `${GAME_WIDTH  * scale}px`;
+    app.canvas.style.width = `${GAME_WIDTH * scale}px`;
     app.canvas.style.height = `${GAME_HEIGHT * scale}px`;
   }
   scaleToFit();
@@ -160,7 +160,33 @@ async function init() {
   function playerNearCounter() {
     const { x, y, w, h } = map.counterInteractZone;
     return player.sprite.x >= x && player.sprite.x <= x + w &&
-           player.sprite.y >= y && player.sprite.y <= y + h;
+      player.sprite.y >= y && player.sprite.y <= y + h;
+  }
+
+  // Synthesized cha-ching sound using Web Audio API — played when money is earned
+  function playChaChing() {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+
+    // Low "cha" hit
+    const osc1 = ctx.createOscillator();
+    const g1 = ctx.createGain();
+    osc1.connect(g1); g1.connect(ctx.destination);
+    osc1.frequency.setValueAtTime(880, now);
+    osc1.frequency.exponentialRampToValueAtTime(440, now + 0.08);
+    g1.gain.setValueAtTime(0.25, now);
+    g1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc1.start(now); osc1.stop(now + 0.12);
+
+    // High "ching" note
+    const osc2 = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    osc2.connect(g2); g2.connect(ctx.destination);
+    osc2.frequency.setValueAtTime(1760, now + 0.08);
+    osc2.frequency.exponentialRampToValueAtTime(1100, now + 0.45);
+    g2.gain.setValueAtTime(0.35, now + 0.08);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+    osc2.start(now + 0.08); osc2.stop(now + 0.5);
   }
 
   // Spawn the first NPC right away so the game isn't empty at start
@@ -188,7 +214,7 @@ async function init() {
   app.stage.addChild(backLabel);
 
   backBtn.on('pointerover', () => { backBtn.alpha = 1; backLabel.alpha = 1; });
-  backBtn.on('pointerout',  () => { backBtn.alpha = 0.7; backLabel.alpha = 0.7; });
+  backBtn.on('pointerout', () => { backBtn.alpha = 0.7; backLabel.alpha = 0.7; });
   backBtn.on('pointerdown', () => {
     const W = app.screen.width;
     const H = app.screen.height;
@@ -229,7 +255,7 @@ async function init() {
       btn.interactive = true;
       btn.cursor = 'pointer';
       btn.on('pointerover', () => { bg.alpha = 0.8; });
-      btn.on('pointerout',  () => { bg.alpha = 1; });
+      btn.on('pointerout', () => { bg.alpha = 1; });
       btn.on('pointerdown', onClick);
       return btn;
     }
@@ -256,6 +282,70 @@ async function init() {
   });
   app.stage.addChild(backBtn);
 
+  // ---- E-key order interaction ----
+
+  // Encapsulates all order-dialog logic; called when player presses E at register
+  function openOrderDialog(frontEntry) {
+    dialogTriggered = true;
+    const order = getRandomOrder();
+    const capturedEntry = frontEntry;
+    orderSystem.show(order, (decision) => {
+      if (decision === 'yes') {
+        const chairIndex = getRandomFreeChair();
+        occupiedChairs.add(chairIndex);
+        const chairPos = map.chairPositions[chairIndex];
+        capturedEntry.npc.startSitting(chairPos);
+        seatedCustomers.push({ npc: capturedEntry.npc, name: capturedEntry.name, order, chairIndex, decision });
+        orderSystem.addSeatedCustomer(capturedEntry.npc, capturedEntry.name, order);
+        capturedEntry.npc.setOnClick(() => {
+          orderSystem.showSeatModal({ name: capturedEntry.name, order }, () => {
+            const scIdx = seatedCustomers.findIndex(sc => sc.npc === capturedEntry.npc);
+            if (scIdx !== -1) {
+              if (seatedCustomers[scIdx].decision === 'yes') {
+                orderSystem.addMoney(20);
+                playChaChing();
+              }
+              occupiedChairs.delete(seatedCustomers[scIdx].chairIndex);
+              seatedCustomers.splice(scIdx, 1);
+            }
+            orderSystem.removeSeatedCustomer(capturedEntry.npc);
+            capturedEntry.npc.startExit('right');
+            exitingNPCs.push(capturedEntry.npc);
+          });
+        });
+      } else {
+        capturedEntry.npc.startExit('right');
+        exitingNPCs.push(capturedEntry.npc);
+      }
+      customerQueue.shift();
+      for (const entry of customerQueue) entry.npc.advanceQueue();
+      dialogTriggered = false;
+    }, () => {
+      dialogTriggered = false;
+    });
+  }
+
+  // "Press [E]" floating prompt above the register — shown when interaction is ready
+  const interactPrompt = new Text({
+    text: '[E] Take Order',
+    style: { fill: 0xffffff, fontSize: 11, fontFamily: 'monospace' },
+  });
+  interactPrompt.anchor.set(0.5, 1);
+  interactPrompt.x = map.counterInteractZone.x + map.counterInteractZone.w / 2;
+  interactPrompt.y = map.counterInteractZone.y - 4;
+  interactPrompt.visible = false;
+  app.stage.addChild(interactPrompt);
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'e' && e.key !== 'E') return;
+    if (dialogTriggered || orderSystem.isOpen()) return;
+    if (customerQueue.length === 0) return;
+    if (occupiedChairs.size >= map.chairPositions.length) return;
+    const front = customerQueue[0];
+    if (!front.npc.arrived() || !playerNearCounter()) return;
+    openOrderDialog(front);
+  });
+
   await transition.fadeOut();
 
   // ── Crafting system (Vien) ──────────────────────────────────────────────
@@ -275,13 +365,15 @@ async function init() {
   // Espresso machine interaction
   const ESPRESSO_CX = 322;
   const ESPRESSO_CY = 195;
-  const ESPRESSO_R  = 15;
+  const ESPRESSO_R = 15;
   let nearEspresso = false;
 
   const pressEHint = new Text({
     text: '[ E ] Craft',
-    style: { fontFamily: '"Press Start 2P"', fontSize: 8, fill: 0xffffff,
-             dropShadow: { color: 0x000000, blur: 0, distance: 1 } },
+    style: {
+      fontFamily: '"Press Start 2P"', fontSize: 8, fill: 0xffffff,
+      dropShadow: { color: 0x000000, blur: 0, distance: 1 }
+    },
   });
   pressEHint.anchor.set(0.5, 1);
   pressEHint.x = ESPRESSO_CX;
@@ -292,13 +384,15 @@ async function init() {
   // Sink interaction (empties toolbar)
   const SINK_CX = 538;
   const SINK_CY = 195;
-  const SINK_R  = 15;
+  const SINK_R = 15;
   let nearSink = false;
 
   const sinkHint = new Text({
     text: '[ E ] Empty',
-    style: { fontFamily: '"Press Start 2P"', fontSize: 8, fill: 0xffffff,
-             dropShadow: { color: 0x000000, blur: 0, distance: 1 } },
+    style: {
+      fontFamily: '"Press Start 2P"', fontSize: 8, fill: 0xffffff,
+      dropShadow: { color: 0x000000, blur: 0, distance: 1 }
+    },
   });
   sinkHint.anchor.set(0.5, 1);
   sinkHint.x = SINK_CX;
@@ -435,49 +529,11 @@ async function init() {
       }
     }
 
-    // Trigger order dialog when front-of-queue NPC has arrived and player is at counter
-    if (!dialogTriggered && customerQueue.length > 0) {
-      const frontEntry = customerQueue[0];
-      if (frontEntry.npc.arrived() && playerNearCounter() && occupiedChairs.size < map.chairPositions.length) {
-        dialogTriggered = true;
-        const order = getRandomOrder();
-
-        // Capture frontEntry in closure so it stays valid after queue shifts
-        const capturedEntry = frontEntry;
-        orderSystem.show(order, (decision) => {
-          if (decision === 'yes') {
-            orderSystem.addMoney(20);
-
-            const chairIndex = getRandomFreeChair();
-            occupiedChairs.add(chairIndex);
-            const chairPos = map.chairPositions[chairIndex];
-            capturedEntry.npc.startSitting(chairPos);
-            seatedCustomers.push({ npc: capturedEntry.npc, name: capturedEntry.name, order, chairIndex });
-            orderSystem.addSeatedCustomer(capturedEntry.npc, capturedEntry.name, order);
-
-            capturedEntry.npc.setOnClick(() => {
-              orderSystem.showSeatModal({ name: capturedEntry.name, order }, () => {
-                const scIdx = seatedCustomers.findIndex(sc => sc.npc === capturedEntry.npc);
-                if (scIdx !== -1) {
-                  occupiedChairs.delete(seatedCustomers[scIdx].chairIndex);
-                  seatedCustomers.splice(scIdx, 1);
-                }
-                orderSystem.removeSeatedCustomer(capturedEntry.npc);
-                capturedEntry.npc.startExit('right');
-                exitingNPCs.push(capturedEntry.npc);
-              });
-            });
-          } else {
-            // Order declined — exit right
-            capturedEntry.npc.startExit('right');
-            exitingNPCs.push(capturedEntry.npc);
-          }
-
-          customerQueue.shift();
-          dialogTriggered = false;
-        });
-      }
-    }
+    // Show [E] prompt when player can interact with the register
+    const canInteract = !dialogTriggered && !orderSystem.isOpen() &&
+      customerQueue.length > 0 && customerQueue[0].npc.arrived() &&
+      playerNearCounter() && occupiedChairs.size < map.chairPositions.length;
+    interactPrompt.visible = canInteract;
 
     // Clean up queue NPCs that exited without sitting (e.g. cafe full)
     for (let i = customerQueue.length - 1; i >= 0; i--) {

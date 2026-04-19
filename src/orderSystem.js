@@ -1,19 +1,27 @@
 import { Container, Graphics, Text, TextStyle, Sprite } from 'pixi.js';
 import { GAME_WIDTH, GAME_HEIGHT } from './constants.js';
-
-const ORDERS = ['Americano', 'Frappuccino', 'Macchiato', 'Matcha Latte'];
+import { RECIPES } from './data/recipes.js';
 
 export function getRandomOrder() {
-  return ORDERS[Math.floor(Math.random() * ORDERS.length)];
+  const recipe = RECIPES[Math.floor(Math.random() * RECIPES.length)];
+  return recipe.result.replace('\n', ' ');
 }
 
 export function createOrderSystem(app) {
   let yesCount = 0;
   let noCount = 0;
-  let moneyAmount = 0;
-  let dialogOpen = false;
+  let moneyAmount = 20;
+  let dialogOpen = false;   // true while accepting Yes/No input
+  let dialogFading = false; // true while container is fading in or out
   let selectedOption = 0;
   let onDecision = null;
+  let onDismiss = null;     // fired when player closes dialog without making a decision
+
+  // ---- Dialog fade state ----
+  const FADE_FRAMES = 12; // ~0.2s at 60fps
+  let fadeDir = 0;         // 1=fade-in, -1=fade-out, 0=idle
+  let fadeProgress = 0;
+  let onFadeOutDone = null;
   let seatModalOpen = false;
   let seatModalOnDone = null;
   let ordersPaneVisible = false;
@@ -38,7 +46,7 @@ export function createOrderSystem(app) {
   noText.x = 12;
   noText.y = 36;
   const moneyText = new Text({
-    text: 'Money: $0',
+    text: 'Money: $20',
     style: new TextStyle({ fill: 0xffd700, fontSize: 14, fontFamily: 'monospace' }),
   });
   moneyText.x = 12;
@@ -239,6 +247,21 @@ export function createOrderSystem(app) {
   headerText.y = 10;
   dialogContainer.addChild(headerText);
 
+  // X dismiss button — closes dialog without making a Yes/No decision
+  const dialogCloseBtn = new Graphics();
+  dialogCloseBtn.roundRect(0, 0, 24, 24, 5);
+  dialogCloseBtn.fill({ color: 0xb85a5a });
+  dialogCloseBtn.x = DIALOG_W - 32;
+  dialogCloseBtn.y = 8;
+  dialogContainer.addChild(dialogCloseBtn);
+  const dialogCloseTxt = new Text({
+    text: 'X',
+    style: new TextStyle({ fill: 0xffffff, fontSize: 12, fontFamily: 'monospace', fontWeight: 'bold' }),
+  });
+  dialogCloseTxt.x = DIALOG_W - 26;
+  dialogCloseTxt.y = 12;
+  dialogContainer.addChild(dialogCloseTxt);
+
   const orderText = new Text({
     text: '',
     style: new TextStyle({ fill: 0x3b2700, fontSize: 17, fontFamily: 'serif', wordWrap: true, wordWrapWidth: 385 }),
@@ -298,6 +321,7 @@ export function createOrderSystem(app) {
 
   function confirmSelection() {
     if (!dialogOpen) return;
+    const decision = selectedOption === 0 ? 'yes' : 'no';
     if (selectedOption === 0) {
       yesCount++;
       yesText.text = `Yes: ${yesCount}`;
@@ -305,15 +329,47 @@ export function createOrderSystem(app) {
       noCount++;
       noText.text = `No: ${noCount}`;
     }
-    hide();
-    if (onDecision) onDecision(selectedOption === 0 ? 'yes' : 'no');
+    // Stop accepting input immediately; keep dialogFading=true so player stays frozen
+    dialogOpen = false;
+    dialogFading = true;
+    const capturedCallback = onDecision;
+    fadeDir = -1;
+    fadeProgress = 0;
+    onFadeOutDone = () => {
+      dialogContainer.visible = false;
+      dialogContainer.alpha = 1;
+      dialogFading = false;
+      if (capturedCallback) capturedCallback(decision);
+    };
   }
+
+  // Close dialog without committing to Yes or No — NPC stays in queue
+  function dismissDialog() {
+    if (!dialogOpen) return;
+    dialogOpen = false;
+    dialogFading = true;
+    const capturedDismiss = onDismiss;
+    fadeDir = -1;
+    fadeProgress = 0;
+    onFadeOutDone = () => {
+      dialogContainer.visible = false;
+      dialogContainer.alpha = 1;
+      dialogFading = false;
+      if (capturedDismiss) capturedDismiss();
+    };
+  }
+
+  dialogCloseBtn.eventMode = 'static'; dialogCloseBtn.cursor = 'pointer';
+  dialogCloseBtn.on('pointerdown', dismissDialog);
+  dialogCloseTxt.eventMode = 'static'; dialogCloseTxt.cursor = 'pointer';
+  dialogCloseTxt.on('pointerdown', dismissDialog);
 
   function onKeyDown(e) {
     if (!dialogOpen) return;
     if (e.key === 'ArrowLeft' || e.key === 'a') { selectedOption = 0; updateButtons(); }
     else if (e.key === 'ArrowRight' || e.key === 'd') { selectedOption = 1; updateButtons(); }
     else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); confirmSelection(); }
+    else if (e.key === 'Escape') { e.preventDefault(); dismissDialog(); }
   }
   window.addEventListener('keydown', onKeyDown);
 
@@ -326,21 +382,59 @@ export function createOrderSystem(app) {
   noLabel.eventMode = 'static'; noLabel.cursor = 'pointer';
   noLabel.on('pointerdown', () => { if (!dialogOpen) return; selectedOption = 1; updateButtons(); confirmSelection(); });
 
-  function show(order, callback) {
+  function show(order, callback, dismissCallback) {
     onDecision = callback || null;
+    onDismiss = dismissCallback || null;
     selectedOption = 0;
     orderText.text = `"I'd like a ${order}, please!"`;
+    updateButtons();
+    dialogContainer.alpha = 0;
     dialogContainer.visible = true;
     dialogOpen = true;
-    updateButtons();
+    dialogFading = true;
+    fadeDir = 1;
+    fadeProgress = 0;
+    onFadeOutDone = null;
   }
 
   function hide() {
-    dialogContainer.visible = false;
+    if (!dialogOpen && !dialogFading) return;
     dialogOpen = false;
+    dialogFading = true;
+    fadeDir = -1;
+    fadeProgress = 0;
+    onFadeOutDone = () => {
+      dialogContainer.visible = false;
+      dialogContainer.alpha = 1;
+      dialogFading = false;
+    };
   }
 
-  function isOpen() { return dialogOpen; }
+  function isOpen() { return dialogOpen || dialogFading; }
+
+  // Ticker drives the dialog fade-in / fade-out animation
+  function onFadeTick(ticker) {
+    if (fadeDir === 0) return;
+    fadeProgress += ticker.deltaTime;
+    const t = Math.min(fadeProgress / FADE_FRAMES, 1);
+    dialogContainer.alpha = fadeDir === 1 ? t : 1 - t;
+    if (t >= 1) {
+      const completedDir = fadeDir;
+      fadeDir = 0;
+      if (completedDir === -1) {
+        // Fade-out done — fire the completion callback (hides container, fires onDecision)
+        if (onFadeOutDone) {
+          const fn = onFadeOutDone;
+          onFadeOutDone = null;
+          fn();
+        }
+      } else {
+        // Fade-in done — dialog fully visible, stop fading flag
+        dialogFading = false;
+      }
+    }
+  }
+  app.ticker.add(onFadeTick);
 
   // ---- New API ----
 
@@ -429,6 +523,7 @@ export function createOrderSystem(app) {
 
   function destroy() {
     window.removeEventListener('keydown', onKeyDown);
+    app.ticker.remove(onFadeTick);
   }
 
   return {
