@@ -69,7 +69,7 @@ export async function createNPC(app, registerBounds, pathStartRow, options = {})
   let clickCallback = null;
 
   // Walks NPC from its current position down to the path, then off-screen left
-  function startExit(direction = 'left') {
+  function startExit(direction = 'right') {
     if (exiting || exited) return;
     exiting = true;
     arrived = false;
