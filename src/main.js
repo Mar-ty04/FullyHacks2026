@@ -282,6 +282,70 @@ async function init() {
   });
   app.stage.addChild(backBtn);
 
+  // ---- E-key order interaction ----
+
+  // Encapsulates all order-dialog logic; called when player presses E at register
+  function openOrderDialog(frontEntry) {
+    dialogTriggered = true;
+    const order = getRandomOrder();
+    const capturedEntry = frontEntry;
+    orderSystem.show(order, (decision) => {
+      if (decision === 'yes') {
+        const chairIndex = getRandomFreeChair();
+        occupiedChairs.add(chairIndex);
+        const chairPos = map.chairPositions[chairIndex];
+        capturedEntry.npc.startSitting(chairPos);
+        seatedCustomers.push({ npc: capturedEntry.npc, name: capturedEntry.name, order, chairIndex, decision });
+        orderSystem.addSeatedCustomer(capturedEntry.npc, capturedEntry.name, order);
+        capturedEntry.npc.setOnClick(() => {
+          orderSystem.showSeatModal({ name: capturedEntry.name, order }, () => {
+            const scIdx = seatedCustomers.findIndex(sc => sc.npc === capturedEntry.npc);
+            if (scIdx !== -1) {
+              if (seatedCustomers[scIdx].decision === 'yes') {
+                orderSystem.addMoney(20);
+                playChaChing();
+              }
+              occupiedChairs.delete(seatedCustomers[scIdx].chairIndex);
+              seatedCustomers.splice(scIdx, 1);
+            }
+            orderSystem.removeSeatedCustomer(capturedEntry.npc);
+            capturedEntry.npc.startExit('right');
+            exitingNPCs.push(capturedEntry.npc);
+          });
+        });
+      } else {
+        capturedEntry.npc.startExit('right');
+        exitingNPCs.push(capturedEntry.npc);
+      }
+      customerQueue.shift();
+      for (const entry of customerQueue) entry.npc.advanceQueue();
+      dialogTriggered = false;
+    }, () => {
+      dialogTriggered = false;
+    });
+  }
+
+  // "Press [E]" floating prompt above the register — shown when interaction is ready
+  const interactPrompt = new Text({
+    text: '[E] Take Order',
+    style: { fill: 0xffffff, fontSize: 11, fontFamily: 'monospace' },
+  });
+  interactPrompt.anchor.set(0.5, 1);
+  interactPrompt.x = map.counterInteractZone.x + map.counterInteractZone.w / 2;
+  interactPrompt.y = map.counterInteractZone.y - 4;
+  interactPrompt.visible = false;
+  app.stage.addChild(interactPrompt);
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'e' && e.key !== 'E') return;
+    if (dialogTriggered || orderSystem.isOpen()) return;
+    if (customerQueue.length === 0) return;
+    if (occupiedChairs.size >= map.chairPositions.length) return;
+    const front = customerQueue[0];
+    if (!front.npc.arrived() || !playerNearCounter()) return;
+    openOrderDialog(front);
+  });
+
   await transition.fadeOut();
 
   // ── Crafting system (Vien) ──────────────────────────────────────────────
@@ -399,60 +463,11 @@ async function init() {
       }
     }
 
-    // Trigger order dialog when front-of-queue NPC has arrived and player is at counter
-    if (!dialogTriggered && customerQueue.length > 0) {
-      const frontEntry = customerQueue[0];
-      if (frontEntry.npc.arrived() && playerNearCounter() && occupiedChairs.size < map.chairPositions.length) {
-        dialogTriggered = true;
-        const order = getRandomOrder();
-
-        // Capture frontEntry in closure so it stays valid after queue shifts
-        const capturedEntry = frontEntry;
-        orderSystem.show(order, (decision) => {
-          if (decision === 'yes') {
-            const chairIndex = getRandomFreeChair();
-            occupiedChairs.add(chairIndex);
-            const chairPos = map.chairPositions[chairIndex];
-            capturedEntry.npc.startSitting(chairPos);
-            // Store decision so Mark as Done knows whether to award money
-            seatedCustomers.push({ npc: capturedEntry.npc, name: capturedEntry.name, order, chairIndex, decision });
-            orderSystem.addSeatedCustomer(capturedEntry.npc, capturedEntry.name, order);
-
-            capturedEntry.npc.setOnClick(() => {
-              orderSystem.showSeatModal({ name: capturedEntry.name, order }, () => {
-                const scIdx = seatedCustomers.findIndex(sc => sc.npc === capturedEntry.npc);
-                if (scIdx !== -1) {
-                  // Award money when order is completed (marked as done), not at dialog
-                  if (seatedCustomers[scIdx].decision === 'yes') {
-                    orderSystem.addMoney(20);
-                    playChaChing();
-                  }
-                  occupiedChairs.delete(seatedCustomers[scIdx].chairIndex);
-                  seatedCustomers.splice(scIdx, 1);
-                }
-                orderSystem.removeSeatedCustomer(capturedEntry.npc);
-                capturedEntry.npc.startExit('right''right');
-                exitingNPCs.push(capturedEntry.npc);
-              });
-            });
-          } else {
-            // Order declined — exit right
-            capturedEntry.npc.startExit('right');
-            exitingNPCs.push(capturedEntry.npc);
-          }
-
-          customerQueue.shift();
-          // Advance remaining queue members one slot forward so they fill the gap
-          for (const entry of customerQueue) {
-            entry.npc.advanceQueue();
-          }
-          dialogTriggered = false;
-        }, () => {
-          // Dismissed with X or Escape — NPC stays in queue, dialog can reopen
-          dialogTriggered = false;
-        });
-      }
-    }
+    // Show [E] prompt when player can interact with the register
+    const canInteract = !dialogTriggered && !orderSystem.isOpen() &&
+      customerQueue.length > 0 && customerQueue[0].npc.arrived() &&
+      playerNearCounter() && occupiedChairs.size < map.chairPositions.length;
+    interactPrompt.visible = canInteract;
 
     // Clean up queue NPCs that exited without sitting (e.g. cafe full)
     for (let i = customerQueue.length - 1; i >= 0; i--) {
