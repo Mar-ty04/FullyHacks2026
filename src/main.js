@@ -122,11 +122,14 @@ async function init() {
   const transition = createTransition(app);
   app.stage.addChild(transition.overlay);
 
+  const musicPromise = initBgMusic().catch(() => null);
+
   const startPage = await createStartPage(app);
   app.stage.addChildAt(startPage.container, 0);
   await transition.fadeOut();
 
   await startPage.waitForStart();
+  musicPromise.then(player => { if (player) fadeInMusic(player); });
   await transition.fadeIn();
   app.stage.removeChild(startPage.container);
 
@@ -398,10 +401,7 @@ async function init() {
   const settingsUI = createSettingsUI(app);
   app.stage.addChild(settingsUI.container);
 
-  // ── Background music — start loading, fade in once ready ───────────────
-  const musicPromise = initBgMusic().catch(() => null);
   musicPromise.then(player => { if (player) settingsUI.setPlayer(player); });
-  musicPromise.then(player => { if (player) fadeInMusic(player); });
 
   // ── Crafting system (Vien) ──────────────────────────────────────────────
   const toolbar = createToolbar(app);
