@@ -18,5 +18,4 @@ Although game development and this project as a subsequent result has proven to 
 We wish to add many more features to our game in the future! We wish to expand the currency system in our game so that you can do more with your money, from expanding the business to even advertising your coffees and matchas outside the local area to attract more foot traffic. We also want to add a wider variety of drinks and customer types so that you can play and experience a game that has a heavier emphasis on game progression as opposed to just the initial experience, so that it is closer to real life in the sense of you managing your cafe business. We want the player to experience the journey of managing the cafe, not just the novel thrills of the first day!
 
 ## Check Out the Project
-![Bubbly Brew Co Home Screen]('*\bubbly_brew_co.jpg')
 Youtube Demo: https://youtu.be/2yp95UJu2Fc?si=6Xi6e4VBZXVcnuMX
