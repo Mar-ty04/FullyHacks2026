@@ -635,9 +635,14 @@ async function init() {
       }
     }
 
-    // Depth sort by Y position
+    // Depth sort — anchored sprites (player/NPC) sort by y (center),
+    // non-anchored sprites (furniture) sort by bottom edge
     for (const child of gameContainer.children) {
-      child.zIndex = child.y;
+      if (child.anchor && child.anchor.y > 0) {
+        child.zIndex = child.y;
+      } else {
+        child.zIndex = child.y + child.height;
+      }
     }
 
     // Seated NPCs must render above their stool

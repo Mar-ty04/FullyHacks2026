@@ -62,25 +62,25 @@ export async function createCafeMap(app) {
   // Chair center positions for NPC sit-down targets (4 stools + 6 booth chairs = 10 total)
   const chairPositions = [];
 
-  // Add furniture with full collision (player can't walk through at all)
-  function addSolidFurniture(sprite, collisionPadding = 2) {
+  // Add furniture with solid collision (bottom 60% — player can overlap top edge)
+  function addSolidFurniture(sprite, collisionPadding = 0) {
     furniture.push(sprite);
     const w = sprite.texture.width * sprite.scale.x;
     const h = sprite.texture.height * sprite.scale.y;
     colliders.push({
       x: sprite.x - collisionPadding,
-      y: sprite.y - collisionPadding,
+      y: sprite.y + h * 0.4,
       w: w + collisionPadding * 2,
-      h: h + collisionPadding * 2,
+      h: h * 0.6 + collisionPadding,
     });
   }
 
-  // Add furniture with partial collision (bottom 70% — player can walk behind top 30%)
-  function addFurniture(sprite, collisionPadding = 2) {
+  // Add furniture with partial collision (bottom 50% — player can walk behind top half)
+  function addFurniture(sprite, collisionPadding = 0) {
     furniture.push(sprite);
     const w = sprite.texture.width * sprite.scale.x;
     const h = sprite.texture.height * sprite.scale.y;
-    const collisionTop = 0.3;
+    const collisionTop = 0.5;
     colliders.push({
       x: sprite.x - collisionPadding,
       y: sprite.y + h * collisionTop,
@@ -270,7 +270,7 @@ export async function createCafeMap(app) {
     table.x = tableX;
     table.y = 235;
     table.scale.set(tableScale);
-    addFurniture(table);
+    addSolidFurniture(table);
 
     const chair1 = new Sprite(chairTex);
     chair1.x = tableX + Math.round(tableScreenW * 0.2 - chairScreenW / 2) + 8;
@@ -301,7 +301,6 @@ export async function createCafeMap(app) {
     height: registerTex.height * register.scale.y,
   };
 
-  // Debug: draw collision boxes so we can see them
   // // Debug: draw collision boxes
   // const debugGfx = new Graphics();
   // for (const c of colliders) {
